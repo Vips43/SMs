@@ -1,0 +1,51 @@
+import cookieParser from "cookie-parser";
+import express from "express";
+import morgan from "morgan";
+import dotenv from "dotenv";
+import cors from "cors";
+dotenv.config();
+
+import connectDB from "./conn/connectDB.js";
+import errorMiddleware from "./middleware/errorMiddleware.js";
+import userRouter from "./routes/userRoutes.js";
+import authRoute from "./routes/authRoutes.js";
+import { adminAccess } from "./middleware/authMiddleware.js";
+import fileUpload from "express-fileupload";
+import { v2 as cloudinary } from "cloudinary";
+import empRouter from "./routes/empRoutes.js";
+
+const app = express();
+
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: process.env.frontend_url || ["http://localhost:3000"],
+    credentials: true,
+  }),
+);
+app.use(morgan("dev"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(fileUpload({ createParentPath: true }));
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_KEY,
+  api_secret: process.env.CLOUD_SECRET,
+});
+
+app.use("/api/auth", authRoute);
+app.use("/api/user", adminAccess, userRouter);
+app.use("/api/emp", adminAccess, empRouter);
+
+
+app.use(errorMiddleware);
+const mongouri =
+  process.env.NODE_ENV === "production"
+    ? process.env.MONGO_URI
+    : process.env.MONGO_LOCAL;
+
+app.listen(8000, () => {
+  connectDB(mongouri);
+  console.log("server started on 8000");
+});

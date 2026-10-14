@@ -1,0 +1,183 @@
+import { createError } from "../middleware/errorMiddleware.js";
+import User from "../models/userModel.js";
+import { createToken, uploadToCloud } from "../utils/helperFunction.js";
+import path from "path";
+import fs from "fs/promises";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const userService = {
+  loginUser: async (creds) => {
+    const extUser = await User.findOne({ email: creds.email }).select(
+      "+password",
+    );
+    if (!extUser) throw createError("User not found", 404);
+
+    const validateUser = await extUser.comparePassword(creds.password);
+    if (!validateUser) throw createError("credentials not matched", 401);
+
+    const token = await createToken(extUser);
+    return {
+      token,
+      user: { id: extUser._id, name: extUser.name, email: extUser.email },
+    };
+  },
+
+  createUser: async (creds) => {
+    if (!creds?.user && !creds.email && !creds.password)
+      throw createError("No info provided", 400);
+    const user = await User.findOne({ email: creds.email });
+    if (user) throw createError("Employee already exists with this email", 409);
+
+    const newUser = await User.create({
+      ...creds,
+      salaryHistory: creds.currentSalary
+        ? [
+            {
+              amount: creds.currentSalary,
+              incrementAmount: 0,
+              reason: "Joining salary",
+            },
+          ]
+        : [],
+    });
+    return { user: newUser, msg: "User created successfully" };
+  },
+
+  changePassword: async ({ body, user }) => {
+    const creds = body;
+    console.log("creds", creds);
+    if (!["admin", "operator"].includes(user.role))
+      throw createError("you have no acccess to perform this action", 401);
+
+    const exUser = await User.findById(user.id).select("+password");
+    if (!exUser) throw createError("User not found", 404);
+
+    const isMatch = await exUser.comparePassword(creds.password);
+    if (isMatch) throw createError("Password not changed", 400);
+
+    exUser.password = creds.password;
+    await exUser.save();
+
+    return { msg: "Password updated successfully" };
+  },
+
+  editUser: async (creds, id) => {
+    if (!creds || (!creds?.user && !creds.email))
+      throw createError("please info provided", 400);
+    const user = await User.findById(id);
+
+    if (!user) {
+      throw createError("User not found", 404);
+    }
+    const { password, ...data } = creds;
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          firstname: creds.name,
+          middlename: creds.middlename,
+          lastname: creds.lastname,
+          email: creds.email,
+          dob: creds.dob,
+          residAddress: creds.residAddress,
+          currAddress: creds.currAddress,
+          bloodGroup: creds.bloodGroup,
+          resume: creds.resume,
+          govtIds: creds.govtIds,
+          joiningDate: creds.JoiningDate,
+          policeVerification: creds.policeVerification,
+          currentSalary: creds.currentSalary,
+
+          // IMPORTANT
+          familyDetails: creds.familyDetails || [],
+          bankDetails: creds.bankDetails || [],
+          ...data,
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    return {
+      msg: "User Edited Successfully",
+      user: updatedUser,
+    };
+  },
+
+  getAllUsers: async (data = {}) => {
+    const query = {};
+
+    const { name, email } = data;
+    if (name || email) {
+      query.$or = [];
+      if (name) {
+        query.$or.push({ name: { $regex: name, $options: "i" } });
+      }
+      if (email) {
+        query.$or.push({ email: { $regex: email, $options: "i" } });
+      }
+    }
+    const limit = parseInt(data.limit) || 12;
+    const page = parseInt(data.page) || 1;
+
+    const skip = (page - 1) * limit;
+
+    const [users, totalUsers] = await Promise.all([
+      User.find(query)
+        .populate("attendenceRecords")
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(),
+    ]);
+
+    const totalPages = Math.ceil(totalUsers / limit) || 1;
+
+    return {
+      success: true,
+      pagination: {
+        totalPages,
+        page,
+        limit,
+        next: page < totalPages,
+        prev: page > 1,
+        totalUsers,
+      },
+      data: users,
+    };
+  },
+
+
+  uploadFile: async (file) => {
+    if (!file) {
+      throw createError("No files uploaded", 400);
+    }
+
+    const filename = `${Date.now()}-${file.name}`;
+    const tempPath = path.join(__dirname, "upload", filename);
+
+    await new Promise((resolve, reject) => {
+      file.mv(tempPath, (err) => {
+        if (err)
+          return reject(createError(err.message || "File upload failed", 500));
+        resolve();
+      });
+    });
+
+    const cloudRes = await uploadToCloud({ filePath: tempPath });
+
+    await fs.unlink(tempPath).catch(() => {});
+
+    return {
+      msg: "File uploaded successfully",
+      filepath: cloudRes.secure_url,
+    };
+  },
+};
+
+export default userService;

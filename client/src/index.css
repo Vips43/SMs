@@ -1,0 +1,30 @@
+@import url("https://googleapis.com");
+@import "tailwindcss";
+@plugin "daisyui";
+
+@theme {
+  --font-signature: "Mr De Haviland", "Great Vibes", cursive;
+
+  --animate-toast-fade: toast-fade 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes toast-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0);
+    visibility: hidden;
+    display: none !important;
+  }
+}
