@@ -4,6 +4,39 @@ import useAuthStore from "@/store/authStore";
 import { dateFormat } from "@/utils/helperfn";
 import toast from "react-hot-toast";
 
+const getStatusStyle = (val) => {
+  switch (val) {
+    case "Present":
+      return {
+        btn: "btn-accent shadow-emerald-500/30 hover:shadow-emerald-500/50",
+        ring: "bg-emerald-500/15",
+        icon: "✓",
+        label: "Marked (Present)",
+      };
+    case "Absent":
+      return {
+        btn: "btn-error shadow-rose-500/30 hover:shadow-rose-500/50",
+        ring: "bg-rose-500/15",
+        icon: "✘",
+        label: "Marked (Absent)",
+      };
+    case "Half-day":
+      return {
+        btn: "btn-warning shadow-amber-500/30 hover:shadow-amber-500/50",
+        ring: "bg-amber-500/15",
+        icon: "½",
+        label: "Marked (Half-Day)",
+      };
+    default:
+      return {
+        btn: "btn-primary shadow-primary/30 hover:shadow-primary/50",
+        ring: "bg-primary/15",
+        icon: "👆",
+        label: "Tap to Check-In",
+      };
+  }
+};
+
 function Attendence() {
   const { user } = useAuthStore((state) => state.user);
 
@@ -11,127 +44,152 @@ function Attendence() {
     mutateAsync: marking,
     isPending: isMarking,
     data,
-    error: markingError,
-    isSuccess,
-    isError,
   } = useMarkAttandence();
 
-  const { data: attendence, isFetching: loadingAttdnc } = useGetAttendenceQuery(user?.id);
-  const history = attendence?.attendenceRecords || [];
+  const { data: attendence, isFetching: loadingAttdnc } = useGetAttendenceQuery(
+    user?.id
+  );
+  const history = attendence?.user || {};
 
   const handleMark = async () => {
     try {
       const res = await marking();
       toast.success(res?.msg || "Attendance marked successfully");
     } catch (error) {
-      console.log(error);
-      toast.error(error?.response?.data?.msg || error?.message || "Internal server error");
+      console.error(error);
+      toast.error(
+        error?.response?.data?.msg || error?.message || "Internal server error"
+      );
     }
   };
 
   return (
-    <div className="relative p-6 bg-base-100 flex flex-col gap-8">
-      <ShowUserAttendence users={attendence?.data} />
-      {/* Header Banner */}
-      {<ShowEmpAttendence data={data} handleMark={handleMark} isError={isError} isMarking={isMarking} isSuccess={isSuccess} loadingAttdnc={loadingAttdnc} markingError={markingError} history={history} />}
+    <div className="relative p-6 md:p-8 bg-base-100 rounded-2xl shadow-xs border border-base-200/60 flex flex-col gap-10">
+      {["admin", "operator"].includes(user?.role) && (
+        <ShowUserAttendence users={attendence?.users} />
+      )}
+
+      <ShowEmpAttendence
+        data={data}
+        handleMark={handleMark}
+        isMarking={isMarking}
+        loadingAttdnc={loadingAttdnc}
+        history={history}
+      />
     </div>
   );
 }
 
 export default Attendence;
 
-function ShowEmpAttendence({ isSuccess, isError, data, markingError, handleMark, isMarking, loadingAttdnc, history }) {
+function ShowEmpAttendence({ handleMark, isMarking, loadingAttdnc, history }) {
+  const statusConfig = getStatusStyle(history?.todayAttendence);
+  const records = history?.attendenceRecords || [];
+console.log(records);
   return (
-    <div>
-      <div className="text-center">
-        <h2 className="text-2xl font-bold tracking-tight text-base-content">Work Attendance</h2>
-        <p className="text-xs text-base-content/60 mt-1">Check-in daily to record your log</p>
+    <div className="flex flex-col gap-10">
+      {/* Header Section */}
+      <div className="text-center space-y-1.5">
+        <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-base-content">
+          Work Attendance
+        </h2>
+        <p className="text-sm text-base-content/60">
+          Check-in daily to record your work log
+        </p>
       </div>
 
-      {(isSuccess || isError) && (
-        <div
-          key={`${isSuccess}-${data?.msg || markingError?.message}`}
-          className="toast toast-center toast-top z-50 mb-4 animate-toast-fade"
-        >
-          {isSuccess && data?.msg && (
-            <div className="alert alert-success shadow-lg text-white font-medium flex items-center gap-2">
-              <span>✅</span>
-              <span>{data.msg}</span>
-            </div>
-          )}
-
-          {isError && markingError && (
-            <div className="alert alert-error shadow-lg text-white font-medium flex items-center gap-2">
-              <span>❌</span>
-              <span>{markingError.message || "Something went wrong"}</span>
-            </div>
-          )}
+      {/* Interactive Action Button with Decorative Ring */}
+      <div className="flex flex-col items-center justify-center py-2">
+        <div className="relative flex items-center justify-center">
+          <div
+            className={`absolute -inset-3 rounded-full blur-md transition-all duration-300 ${statusConfig.ring}`}
+          />
+          <button
+            type="button"
+            onClick={handleMark}
+            disabled={isMarking}
+            className={`relative btn ${statusConfig.btn} btn-circle w-40 h-40 text-sm font-bold tracking-wide shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 border-none flex flex-col items-center justify-center gap-2 text-white`}
+          >
+            {isMarking ? (
+              <span className="loading loading-spinner loading-lg"></span>
+            ) : (
+              <>
+                <span className="text-3xl drop-shadow-xs">
+                  {statusConfig.icon}
+                </span>
+                <span className="px-3 text-center leading-snug">
+                  {statusConfig.label}
+                </span>
+              </>
+            )}
+          </button>
         </div>
-      )}
-
-      {/* Interactive Action Button */}
-      <div className="flex flex-col items-center justify-center gap-2">
-        <button
-          type="button"
-          onClick={handleMark}
-          disabled={isMarking}
-          className="btn btn-accent btn-circle w-36 h-36 text-md font-bold tracking-wide shadow-lg shadow-accent/20 hover:shadow-accent/40 hover:scale-105 active:scale-95 transition-all duration-200 border-none flex flex-col gap-1 text-white"
-        >
-          {isMarking ? (
-            <span className="loading loading-spinner loading-md"></span>
-          ) : (
-            <>
-              <span className="text-2xl">⏳</span>
-              <span>Mark Today</span>
-            </>
-          )}
-        </button>
       </div>
 
       {/* History Log Section */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 border-t border-base-200 pt-6">
         <div className="flex justify-between items-center px-1">
-          <h3 className="font-bold text-sm uppercase tracking-wider text-base-content/70">Recent Logs</h3>
-          <span className="badge badge-sm badge-neutral font-medium">{history.length} Days</span>
+          <h3 className="font-bold text-xs uppercase tracking-widest text-base-content/60">
+            Recent Logs
+          </h3>
+          <span className="badge badge-neutral badge-sm font-semibold px-3 py-2.5">
+            {records.length} {records.length === 1 ? "Day" : "Days"}
+          </span>
         </div>
 
         {loadingAttdnc ? (
-          <div className="flex justify-center items-center py-10">
+          <div className="flex justify-center items-center py-12">
             <span className="loading loading-spinner text-accent loading-md"></span>
           </div>
-        ) : history.length === 0 ? (
-          <div className="text-center py-8 border border-dashed border-base-300 rounded-xl bg-base-200/30">
-            <p className="text-sm text-base-content/50">No logs recorded yet.</p>
+        ) : records.length === 0 ? (
+          <div className="text-center py-10 border border-dashed border-base-300 rounded-2xl bg-base-200/20">
+            <p className="text-sm font-medium text-base-content/50">
+              No attendance logs recorded yet.
+            </p>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-3 max-h-64 overflow-y-auto pr-1">
-            {history?.map((att) => {
-
-
-              const isPresent = att?.status?.toLowerCase() === "present";
-              const isAbsent = att?.status?.toLowerCase() === "absent";
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 max-h-72 overflow-y-auto pr-1">
+            {records.map((att) => {
+              const statusLower = att?.history?.at(-1)?.status?.toLowerCase();
+              const isPresent = statusLower === "present";
+              const isAbsent = statusLower === "absent";
 
               return (
                 <div
                   key={att?._id}
-                  className="flex flex-col gap-5 items-center justify-between p-3 rounded-xl border max-w-42 bg-base-200/20 hover:bg-base-200/50 transition-colors shadow-xs"
+                  className="group flex flex-col items-center justify-between gap-3.5 p-4 rounded-2xl border border-base-300/80 bg-base-100 hover:border-base-content/20 hover:shadow-md transition-all duration-200"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${isPresent ? "bg-success" : isAbsent ? "bg-error" : "bg-warning"}`} />
-                    <span className="text-sm font-semibold text-base-content/90">{dateFormat(att?.createdAt).date}</span>
+                  {/* Date & Status Dot */}
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isPresent
+                          ? "bg-emerald-500 ring-4 ring-emerald-500/15"
+                          : isAbsent
+                            ? "bg-rose-500 ring-4 ring-rose-500/15"
+                            : "bg-amber-500 ring-4 ring-amber-500/15"
+                      }`}
+                    />
+                    <span className="text-sm font-bold text-base-content/90">
+                      {dateFormat(att?.createdAt).date}
+                    </span>
                   </div>
 
+                  {/* Status Pill */}
                   <span
-                    className={`badge badge-sm font-bold tracking-wide ${isPresent
-                      ? "badge-success text-white bg-emerald-600 border-none"
-                      : isAbsent
-                        ? "badge-error text-white bg-rose-600 border-none"
-                        : "badge-warning text-white bg-amber-500 border-none"
-                      }`}
+                    className={`badge badge-sm font-semibold tracking-wide px-3 py-2.5 border-none text-white ${
+                      isPresent
+                        ? "bg-emerald-600"
+                        : isAbsent
+                          ? "bg-rose-600"
+                          : "bg-amber-500"
+                    }`}
                   >
-                    {att?.status || "Marked"}
+                    {att?.history?.at(-1)?.status || "Marked"}
                   </span>
-                  <span className="text-xs font-bold">
+
+                  {/* Timestamp */}
+                  <span className="text-xs font-medium text-base-content/50 group-hover:text-base-content/80 transition-colors">
                     {dateFormat(att?.createdAt).time}
                   </span>
                 </div>
@@ -141,5 +199,5 @@ function ShowEmpAttendence({ isSuccess, isError, data, markingError, handleMark,
         )}
       </div>
     </div>
-  )
+  );
 }

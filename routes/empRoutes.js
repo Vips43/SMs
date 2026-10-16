@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { getAttendence, markAttendence } from "../controllers/empController.js";
+import { attendenceAssign, getAttendence, markAttendence } from "../controllers/empController.js";
 
 const empRouter = Router();
 
 empRouter.post("/mark", markAttendence);
-empRouter.get("/attendence/:id", getAttendence);
+empRouter.post("/attendence/assign", attendenceAssign);
+empRouter.get("/attendence", getAttendence);
 
 export default empRouter;

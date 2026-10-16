@@ -1,22 +1,63 @@
-import { useLogout } from '@/hooks/authHooks';
-import { CircleDollarSign, FaceGrinning, Highlighter, LayoutDashboard, Library, LogOutIcon, Users } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { useLogout } from "@/hooks/authHooks";
+import useAuthStore from "@/store/authStore";
+import {
+  CircleDollarSign,
+  FaceGrinning,
+  Highlighter,
+  LayoutDashboard,
+  Library,
+  LogOutIcon,
+  Users,
+} from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 // Updated icon color definitions to sit cleanly inside the dark slate palette
-const classes = "w-5 h-5 text-slate-400 transition-colors"
+const classes = "w-5 h-5 text-slate-400 transition-colors";
 const links = [
-  { label: "Dashboard", link: "dashboard", icon: <LayoutDashboard className={classes} /> },
-  { label: "Employee", link: "employee", icon: <Users className={classes} /> },
-  { label: "Leave", link: "leave", icon: <FaceGrinning className={classes} /> },
-  { label: "Mark Attendance", link: "attendence", icon: <Highlighter className={classes} /> },
-  { label: "Advance", link: "advance", icon: <CircleDollarSign className={classes} /> },
-]
+  {
+    label: "Dashboard",
+    link: "dashboard",
+    icon: <LayoutDashboard className={classes} />,
+    role: ["admin", "operator", "employee"],
+  },
+  {
+    label: "Employee",
+    link: "employee",
+    icon: <Users className={classes} />,
+    role: ["admin", "operator"],
+  },
+  {
+    label: "Leave",
+    link: "leave",
+    icon: <FaceGrinning className={classes} />,
+    role: ["admin", "operator", "employee"],
+  },
+  {
+    label: "Mark Attendance",
+    link: "attendence",
+    icon: <Highlighter className={classes} />,
+    role: ["admin", "operator", "employee"],
+  },
+  {
+    label: "Advance",
+    link: "advance",
+    icon: <CircleDollarSign className={classes} />,
+    role: ["admin", "operator", "employee"],
+  },
+  {
+    label: "GPS",
+    link: "gps",
+    icon: <CircleDollarSign className={classes} />,
+    role: ["admin"],
+  },
+];
 
 function Sidebar({ children }) {
-  const { mutateAsync: logout, isPending: loggingOut } = useLogout()
+  const user = useAuthStore((state) => state.user);
+  const { mutateAsync: logout, isPending: loggingOut } = useLogout();
 
-  const location = useLocation()
-  const activeLocation = location.pathname.replace("/", "")
+  const location = useLocation();
+  const activeLocation = location.pathname.replace("/", "");
 
   return (
     <div className="drawer lg:drawer-open h-screen">
@@ -26,7 +67,11 @@ function Sidebar({ children }) {
         {/* Navbar for Mobile devices (hidden on large screens) */}
         <nav className="navbar w-full bg-slate-900 text-white border-b border-slate-800 lg:hidden px-4 justify-between">
           <div className="flex items-center gap-3">
-            <label htmlFor="my-drawer-4" aria-label="open sidebar" className="btn btn-square btn-ghost hover:bg-slate-800 text-rose-300">
+            <label
+              htmlFor="my-drawer-4"
+              aria-label="open sidebar"
+              className="btn btn-square btn-ghost hover:bg-slate-800 text-rose-300"
+            >
               <Library />
             </label>
             <span className="font-bold tracking-wide">SMs Menu</span>
@@ -41,11 +86,14 @@ function Sidebar({ children }) {
 
       {/* Sidebar Drawer Container */}
       <div className="drawer-side z-40">
-        <label htmlFor="my-drawer-4" aria-label="close sidebar" className="drawer-overlay"></label>
+        <label
+          htmlFor="my-drawer-4"
+          aria-label="close sidebar"
+          className="drawer-overlay"
+        ></label>
 
         {/* Left Side Navigation Board - Upgraded to Premium Dark Slate Theme */}
         <div className="flex min-h-full flex-col items-start bg-slate-900 w-64 border-r border-slate-800 text-slate-300">
-
           {/* Sidebar Header Title */}
           <div className="px-6 py-5 border-b border-slate-800 w-full">
             <h3 className="font-extrabold text-2xl text-rose-300 tracking-wide">
@@ -58,30 +106,34 @@ function Sidebar({ children }) {
 
           {/* Navigation Links */}
           <ul className="menu w-full grow p-4 gap-1.5">
-            {links.map(li => {
+            {links.map((li) => {
               const isActive = activeLocation === li.link;
+              if (!li.role.includes(user?.user?.role)) {
+                return;
+              }
               return (
                 <li key={li.link}>
                   <Link
                     to={li.link}
                     className={`flex items-center gap-4 py-3 px-4 rounded-xl transition-all duration-200 group font-semibold text-sm
-                      ${isActive
-                        ? "bg-rose-300 text-slate-950 shadow-lg shadow-rose-300/10 scale-[1.02]"
-                        : "hover:bg-rose-800/70 hover:text-white"
+                      ${
+                        isActive
+                          ? "bg-rose-400/20 border-l-4 text-white border-l-rose-400 shadow-lg shadow-rose-300/10 scale-[1.02]"
+                          : "hover:bg-rose-800/70 hover:text-white"
                       }`}
                   >
                     {/* Keeps the icon matching text colors correctly */}
-                    <span className={`${isActive ? "[&_svg]:text-slate-950" : ""}`}>
+                    <span className={`${isActive ? "[&_svg]:text-white" : ""}`}>
                       {li.icon}
                     </span>
                     <span>{li.label}</span>
                   </Link>
                 </li>
-              )
+              );
             })}
 
             {/* Logout Action */}
-            <li className='mt-auto mb-6'>
+            <li className="mt-auto mb-6">
               <button
                 onClick={logout}
                 disabled={loggingOut}
@@ -94,9 +146,8 @@ function Sidebar({ children }) {
           </ul>
         </div>
       </div>
-
     </div>
-  )
+  );
 }
 
 export default Sidebar;

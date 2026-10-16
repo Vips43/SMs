@@ -17,17 +17,32 @@ export const createToken = async (user) => {
   return token;
 };
 
-export const uploadToCloud = async ({ filePath }) => {
-  try {
-    const result = await cloudinary.uploader.upload(filePath, {
-      folder: "SMs",
-      resource_type: "auto",
-    });
-    return result;
-  } catch (error) {
-    console.error("error is just ", error);
-    throw createError(error?.message || "Upload to cloud error", 500);
-  }
+export const uploadToCloud = async ({ filePath, filename }) => {
+  const isDocument =
+    filename.endsWith(".pdf") ||
+    filename.endsWith(".doc") ||
+    filename.endsWith(".docx");
+
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "SMs",
+        resource_type: isDocument ? "raw" : "image",
+        public_id: filename,
+      },
+      (error, result) => {
+        if (error) {
+          console.error("Cloudinary upload failed:", error);
+          return reject(
+            createError(error.message || "Upload to cloud error", 500),
+          );
+        }
+        resolve(result);
+      },
+    );
+
+    uploadStream.end(filePath);
+  });
 };
 
 export const compareDate = (a, b) =>

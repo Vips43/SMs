@@ -18,3 +18,26 @@ export const dateFormat = (date) => {
     }),
   };
 };
+
+const convertIsoDate = (val) => new Date(val).toISOString().split("T")[0];
+
+export const dateCompare = (a, b) => {
+  return convertIsoDate(a) === convertIsoDate(b);
+};
+
+export const userLocation = () => {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          lognitude: position.coords.longitude,
+        });
+      },
+      (error) => {
+        reject(error);
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 },
+    );
+  });
+};

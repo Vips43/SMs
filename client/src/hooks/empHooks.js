@@ -15,11 +15,28 @@ export const useMarkAttandence = () => {
   });
 };
 
+export const useAssignAttendence = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["mark", "user", "assign"],
+    mutationFn: async (data) => {
+      const att = await fetchFn("emp/attendence/assign", {
+        method: "POST",
+        body: data,
+      });
+      return att;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mark", "user", "assign"] });
+    },
+  });
+};
+
 export const useGetAttendenceQuery = (id = "") => {
   return useQuery({
-    queryKey: ["mark", "user", id],
+    queryKey: ["mark", "user","assign", id],
     queryFn: async () => {
-      if (id) return await fetchFn(`emp/attendence/${id}`);
+      // if (id) return await fetchFn(`emp/attendence/${id}`);
 
       return await fetchFn(`emp/attendence`);
     },
@@ -33,7 +50,7 @@ export const useGetAllUsers = ({
   email = "",
 }) => {
   return useQuery({
-    queryKey: ["user", { page, limit, name, email }],
+    queryKey: ["user","file-upload", { page, limit, name, email }],
     queryFn: async () => {
       const data = await fetchFn(
         `user/all?page=${page}&limit=${limit}&name=${name}&email=${email}`,

@@ -3,25 +3,25 @@ import Attendence from "../models/attendencemodel.js";
 import User from "../models/userModel.js";
 
 const empServices = {
-  existAttendence: async (id, user) => {
+  existAttendence: async (id) => {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    if (["operator", "admin"].includes(user.role)) {
-      return true;
-    }
+    // if (user && ["operator", "admin"].includes(user.role)) {
+    //   return;
+    // }
 
     const existAtt = await Attendence.findOne({
       user: id,
-      createdAt: { $gt: startOfDay, $lt: endOfDay },
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
     });
 
-    if (existAtt) throw createError("Already marked Present for Today", 400);
+    if (existAtt) throw createError("Already attendence marked for Today", 400);
   },
 
-  markAttendance: async ({ body, user }) => {
+  attendenceAssign: async function ({ body, user }) {
     const { id, status = "Present" } = body;
     const privilegedRoles = ["operator", "admin"];
     const isPrivileged = privilegedRoles.includes(user.role);
@@ -50,12 +50,11 @@ const empServices = {
     let updatedAttendance;
 
     if (!existingAttendance) {
-      // 2. FIRST TIME CREATION: Set the initial master status and initialize history
       updatedAttendance = await Attendence.create({
         user: targetUser._id,
         status: status,
         date: new Date(),
-        history: [{ status: status, date: new Date() }],
+        history: [{ status: status, date: new Date(), changedBy: user.id }],
       });
       targetUser.todayAttendence = status;
     } else {
@@ -66,6 +65,7 @@ const empServices = {
             history: {
               status: status,
               date: new Date(),
+              changedBy: user.id,
             },
           },
         },
@@ -80,25 +80,47 @@ const empServices = {
     return { msg: `${targetUser?.firstname} is marked ${status}`, targetUser };
   },
 
-  getAttendence: async (user) => {
-    if (["operator", "admin"].includes(user?.role)) {
-      const allUsers = await User.find({})
-        .populate("attendenceRecords")
-        .select(
-          "firstname middlename lastname todayAttendence attendence attendenceRecords",
-        );
-      return { success: true, data: allUsers };
-    }
+  markAttendance: async function ({ body, user }) {
+    await this.existAttendence(user.id, null);
 
-    const singleUser = await User.findById(user._id || user.id)
-      .populate("attendenceRecords")
-      .select("firstname middlename lastname attendence attendenceRecords");
+    await Attendence.create({
+      user: user.id,
+      status: "Present",
+      history: [{ status: "Present", changedBy: user.id }],
+    });
+    return { msg: `${user.firstname} is marked ` };
+  },
+
+  getAttendence: async (currentUser) => {
+    const populateOptions = {
+      path: "attendenceRecords",
+      populate: {
+        path: "history.changedBy",
+        select: "firstname lastname",
+        options: { strictPopulate: false },
+      },
+    };
+    const singleUser = await User.findById(currentUser._id || currentUser.id)
+      .populate(populateOptions)
+      .select(
+        "firstname middlename lastname attendence todayAttendence attendenceRecords",
+      );
 
     if (!singleUser) {
       throw createError("User not found", 404);
     }
 
-    return { success: true, data: singleUser.attendence || [] };
+    if (currentUser && ["operator", "admin"].includes(currentUser.role)) {
+      const allUsers = await User.find({})
+        .populate(populateOptions)
+        .select(
+          "firstname middlename lastname todayAttendence attendence attendenceRecords",
+        );
+
+      return { success: true, user: singleUser, users: allUsers };
+    }
+
+    return { success: true, user: singleUser };
   },
 };
 

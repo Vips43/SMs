@@ -1,3 +1,6 @@
+import { originalConsoleError } from "./utils/redErrorConsole.js";
+originalConsoleError();
+
 import cookieParser from "cookie-parser";
 import express from "express";
 import morgan from "morgan";
@@ -9,7 +12,7 @@ import connectDB from "./conn/connectDB.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
 import userRouter from "./routes/userRoutes.js";
 import authRoute from "./routes/authRoutes.js";
-import { adminAccess } from "./middleware/authMiddleware.js";
+import { authentication } from "./middleware/authMiddleware.js";
 import fileUpload from "express-fileupload";
 import { v2 as cloudinary } from "cloudinary";
 import empRouter from "./routes/empRoutes.js";
@@ -35,9 +38,8 @@ cloudinary.config({
 });
 
 app.use("/api/auth", authRoute);
-app.use("/api/user", adminAccess, userRouter);
-app.use("/api/emp", adminAccess, empRouter);
-
+app.use("/api/user", authentication, userRouter);
+app.use("/api/emp", authentication, empRouter);
 
 app.use(errorMiddleware);
 const mongouri =

@@ -28,7 +28,6 @@ const medicalRecordSchema = new mongoose.Schema({
   file: { type: String, default: "N/A" },
 });
 
-
 const userSchema = new mongoose.Schema(
   {
     firstname: { type: String },
@@ -36,7 +35,11 @@ const userSchema = new mongoose.Schema(
     lastname: { type: String },
     email: { type: String, unique: true },
     password: { type: String, select: false },
-    role: { type: String, enum: ["admin", "employee", "operator"] },
+    role: {
+      type: String,
+      enum: ["admin", "employee", "operator"],
+      default: "employee",
+    },
     photo: { type: String, default: "" },
     todayAttendence: { type: String, enum: ["Present", "Absent", "Half-day"] },
 
@@ -97,10 +100,10 @@ export default User;
 
 async function createUser() {
   await User.create({
-    name: "vipul",
-    email: "vipul@gmail.com",
+    firstname: "vipul",
+    email: "vipulgehlot@hotmail.com",
     password: "12345",
-    role: "admin",
+    role: "employee",
   });
   console.log("usercreated");
 }

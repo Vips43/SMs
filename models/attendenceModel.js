@@ -2,13 +2,18 @@ import mongoose from "mongoose";
 
 // Fixed: Use mongoose.Schema instead of mongoose.model for sub-documents
 const attendenceHitorySchema = new mongoose.Schema({
-  date: { 
-    type: Date, 
-    default: Date.now 
+  date: {
+    type: Date,
+    default: Date.now,
   },
-  status: { 
+  status: {
     type: String,
     enum: ["Present", "Absent", "Half-day"],
+  },
+  changedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
   },
 });
 
@@ -21,7 +26,7 @@ const attendenceSchema = new mongoose.Schema(
     },
     date: {
       type: Date,
-      default: Date.now,
+      default: new Date().setHours(0, 0, 0, 0),
       required: true,
     },
     status: {

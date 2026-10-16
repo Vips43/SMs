@@ -21,7 +21,12 @@ const userService = {
     const token = await createToken(extUser);
     return {
       token,
-      user: { id: extUser._id, name: extUser.name, email: extUser.email },
+      user: {
+        id: extUser._id,
+        name: extUser.name,
+        email: extUser.email,
+        role: extUser.role,
+      },
     };
   },
 
@@ -152,26 +157,15 @@ const userService = {
     };
   },
 
-
   uploadFile: async (file) => {
     if (!file) {
       throw createError("No files uploaded", 400);
     }
 
-    const filename = `${Date.now()}-${file.name}`;
-    const tempPath = path.join(__dirname, "upload", filename);
-
-    await new Promise((resolve, reject) => {
-      file.mv(tempPath, (err) => {
-        if (err)
-          return reject(createError(err.message || "File upload failed", 500));
-        resolve();
-      });
+    const cloudRes = await uploadToCloud({
+      filePath: file.data,
+      filename: file.name,
     });
-
-    const cloudRes = await uploadToCloud({ filePath: tempPath });
-
-    await fs.unlink(tempPath).catch(() => {});
 
     return {
       msg: "File uploaded successfully",

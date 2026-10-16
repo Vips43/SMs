@@ -1,10 +1,10 @@
-import { useMarkAttandence } from "@/hooks/empHooks";
+import { useAssignAttendence } from "@/hooks/empHooks";
 import { dateFormat } from "@/utils/helperfn";
 import { Check, CircleSlash2, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 function ShowUserAttendence({ users }) {
-  const { mutateAsync: mark } = useMarkAttandence();
+  const { mutateAsync: mark } = useAssignAttendence();
 
   async function handleMark(id, status) {
     try {
@@ -12,7 +12,11 @@ function ShowUserAttendence({ users }) {
       toast.success(data?.msg || "Attendance marked successfully!");
     } catch (error) {
       console.log(error.message);
-      toast.error(error?.response?.data?.msg || error.message || "Failed to mark attendance");
+      toast.error(
+        error?.response?.data?.msg ||
+          error.message ||
+          "Failed to mark attendance",
+      );
     }
   }
 
@@ -36,7 +40,7 @@ function ShowUserAttendence({ users }) {
 
   return (
     <>
-      <h3 className="text-2xl font-semibold ">Today's Attendance</h3>
+      <h3 className="text-2xl font-semibold ">Today's Employee's Attendance</h3>
       <table className="table outline outline-gray-400">
         <thead className="bg-accent ">
           <tr>
@@ -49,7 +53,8 @@ function ShowUserAttendence({ users }) {
         <tbody>
           {users?.length ? (
             users?.map((user, idx) => {
-              const name = `${user?.firstname || ""} ${user?.middlename || ""} ${user?.lastname || ""}`.trim();
+              const name =
+                `${user?.firstname || ""} ${user?.middlename || ""} ${user?.lastname || ""}`.trim();
               return (
                 <tr key={user._id}>
                   <td>{idx + 1}</td>
@@ -57,15 +62,24 @@ function ShowUserAttendence({ users }) {
                     <div className="text-base tooltip cursor-pointer">
                       {name || "N/A"}
                       <div className="tooltip-content z-50 p-2 shadow-lg rounded">
-                        <AttedenceHistory history={user?.attendenceRecords || user?.attendence || []} />
+                        <AttedenceHistory
+                          history={user?.attendenceRecords?.[0]?.history || {}}
+                        />
                       </div>
                     </div>
                   </td>
                   <td>
-                    <span className={`badge badge-md font-medium ${user?.todayAttendence === 'Present' ? 'badge-success' :
-                      user?.todayAttendence === 'Absent' ? 'badge-error' :
-                        user?.todayAttendence === 'Half-day' ? 'badge-warning' : 'badge-ghost'
-                      }`}>
+                    <span
+                      className={`badge badge-md font-medium ${
+                        user?.todayAttendence === "Present"
+                          ? "badge-success"
+                          : user?.todayAttendence === "Absent"
+                            ? "badge-error"
+                            : user?.todayAttendence === "Half-day"
+                              ? "badge-warning"
+                              : "badge-ghost"
+                      }`}
+                    >
                       {user?.todayAttendence || "Not Marked"}
                     </span>
                   </td>
@@ -79,7 +93,8 @@ function ShowUserAttendence({ users }) {
                           onClick={(e) => {
                             e.preventDefault();
                             handleMark(user._id, bt.tip);
-                          }}>
+                          }}
+                        >
                           {bt.icon}
                         </button>
                       ))}
@@ -105,15 +120,27 @@ export default ShowUserAttendence;
 
 function AttedenceHistory({ history }) {
   if (!history || !Array.isArray(history) || history.length === 0) {
-    return <div className="p-2 text-xs text-gray-400">No history available</div>;
+    return (
+      <div className="p-2 text-xs text-gray-400">No history available</div>
+    );
   }
 
   return (
-    <div className="px-2 space-y-1 text-left">
+    <div className="px-2 space-y-1 text-left max-h-52 overflow-y-auto">
       <p className="font-semibold text-xs border-b pb-1 mb-1">History Log</p>
-      {history.map((h, i) => (
-        <div key={h._id || i} className="text-xs p-1 border-b border-gray-600 last:border-none">
-          <span className="font-medium">{h.status}</span> — <span className="opacity-80">{dateFormat(h.createdAt || h.date).fullDateAndTime}</span>
+      {history?.map((h, i) => (
+        <div
+          key={h._id || i}
+          className="text-xs p-1 border-b border-gray-600 last:border-none"
+        >
+          <span className="font-medium">{h?.status}</span> —{" "}
+          <strong className="capitalize">
+            {h?.changedBy?.firstname || ""} {h?.changedBy?.lastname || ""}{" "}
+            &nbsp;
+          </strong>
+          <span className="opacity-80">
+            {dateFormat(h?.date).fullDateAndTime}
+          </span>
         </div>
       ))}
     </div>

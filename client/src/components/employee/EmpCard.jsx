@@ -1,3 +1,4 @@
+import { dateFormat } from '@/utils/helperfn';
 import { differenceInYears } from 'date-fns';
 
 const getUserTypeBadge = (type) => {
@@ -36,7 +37,7 @@ export function EmpDetails({ user = {}, setToggle }) {
           />
           <div>
             <div className="flex items-center gap-3">
-              <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h3 className="text-2xl font-bold tracking-tight text-slate-900 capitalize">
                 {user?.firstname} {user?.middlename} {user?.lastname}
               </h3>
               <span className={`badge ${userBadge.badge} badge-sm uppercase font-medium`}>
@@ -266,7 +267,7 @@ console.log('first')
           src={user?.photo || defaultPhoto}
           alt={user?.firstname || "Employee"}
         />
-        <h2 className="card-title text-lg font-bold mt-3 text-center text-slate-900 tracking-tight">
+        <h2 className="card-title text-lg font-bold mt-3 text-center text-slate-900 tracking-tight uppercase">
           {user?.firstname || ""} {user?.middlename || ""} {user?.lastname || ""}
         </h2>
         <span className={`badge ${userBadge.badge} badge-sm font-bold mt-1 uppercase tracking-wider px-3 py-2`}>
@@ -301,7 +302,7 @@ console.log('first')
           <div>
             <span className="text-xs text-slate-500 uppercase font-bold tracking-wide block mb-0.5">Joining Date</span>
             <span className="font-semibold text-slate-900">
-              {user?.joiningDate ? new Date(user.joiningDate).toLocaleDateString() : "N/A"}
+              {user?.joiningDate ? dateFormat(user.joiningDate).date : "N/A"}
             </span>
           </div>
 
