@@ -41,7 +41,6 @@ const userSchema = new mongoose.Schema(
       default: "employee",
     },
     photo: { type: String, default: "" },
-    todayAttendence: { type: String, enum: ["Present", "Absent", "Half-day"] },
 
     active: { type: Boolean, default: true },
 
@@ -53,6 +52,18 @@ const userSchema = new mongoose.Schema(
     bloodGroup: { type: String, default: "N/A" },
 
     attendence: { type: mongoose.Schema.Types.ObjectId, ref: "Attendence" },
+
+    todayAttendence: {
+      type: String,
+      enum: ["Present", "Absent", "Half-day", "N/A"],
+      default: "N/A",
+      get: function (val) {
+        if (!this.updatedAt || val === "N/A") return "N/A";
+        const today = new Date().setHours(0, 0, 0, 0);
+        const lastUpdated = new Date(this.updatedAt).setHours(0, 0, 0, 0);
+        return lastUpdated === today ? val : "N/A";
+      },
+    },
 
     salaryDetails: {
       currentSalary: { type: String, default: 0 },
@@ -92,8 +103,8 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-userSchema.set("toObject", { virtuals: true });
-userSchema.set("toJSON", { virtuals: true });
+userSchema.set("toObject", { virtuals: true, getters: true });
+userSchema.set("toJSON", { virtuals: true, getters: true });
 const User = mongoose.model("User", userSchema);
 
 export default User;

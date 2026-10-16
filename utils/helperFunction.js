@@ -17,6 +17,11 @@ export const createToken = async (user) => {
   return token;
 };
 
+export const resetTodaysAttendeceDaily=async()=>{
+  const today = new Date().setHours(0,0,0,0);
+  
+}
+
 export const uploadToCloud = async ({ filePath, filename }) => {
   const isDocument =
     filename.endsWith(".pdf") ||

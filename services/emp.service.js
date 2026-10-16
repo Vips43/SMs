@@ -15,7 +15,7 @@ const empServices = {
 
     const existAtt = await Attendence.findOne({
       user: id,
-      createdAt: { $gte: startOfDay, $lte: endOfDay },
+      date: { $gte: startOfDay, $lte: endOfDay },
     });
 
     if (existAtt) throw createError("Already attendence marked for Today", 400);
@@ -83,12 +83,18 @@ const empServices = {
   markAttendance: async function ({ body, user }) {
     await this.existAttendence(user.id, null);
 
-    await Attendence.create({
-      user: user.id,
-      status: "Present",
-      history: [{ status: "Present", changedBy: user.id }],
-    });
-    return { msg: `${user.firstname} is marked ` };
+    const [att, curruser] = await Promise.all([
+      Attendence.create({
+        user: user.id,
+        status: "Present",
+        history: [{ status: "Present", changedBy: user.id }],
+      }),
+      User.findByIdAndUpdate(user.id, {
+        $set: { todayAttendence: "Present" },
+      }),
+    ]);
+    console.log(att, curruser);
+    return { msg: `marked ${att.status}` };
   },
 
   getAttendence: async (currentUser) => {
@@ -103,7 +109,7 @@ const empServices = {
     const singleUser = await User.findById(currentUser._id || currentUser.id)
       .populate(populateOptions)
       .select(
-        "firstname middlename lastname attendence todayAttendence attendenceRecords",
+        "firstname middlename lastname attendence todayAttendence attendenceRecords updatedAt",
       );
 
     if (!singleUser) {
@@ -114,7 +120,7 @@ const empServices = {
       const allUsers = await User.find({})
         .populate(populateOptions)
         .select(
-          "firstname middlename lastname todayAttendence attendence attendenceRecords",
+          "firstname middlename lastname todayAttendence attendence attendenceRecords updatedAt",
         );
 
       return { success: true, user: singleUser, users: allUsers };
