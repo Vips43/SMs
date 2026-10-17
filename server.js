@@ -22,7 +22,13 @@ const app = express();
 app.use(cookieParser());
 app.use(
   cors({
-    origin: process.env.frontend_url || ["http://localhost:3000"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost",
+      "capacitor://localhost",
+      "http://192.168.43.173:3000",
+    ],
     credentials: true,
   }),
 );
@@ -47,7 +53,7 @@ const mongouri =
     ? process.env.MONGO_URI
     : process.env.MONGO_LOCAL;
 
-app.listen(8000, () => {
+app.listen(8000, "0,0,0,0", () => {
   connectDB(mongouri);
   console.log("server started on 8000");
 });

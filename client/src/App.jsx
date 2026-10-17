@@ -15,7 +15,7 @@ import { useGetCoOrdinatesMutation } from "./hooks/empHooks";
 function App() {
   const startTracking = useGpsStore((state) => state.startTracking);
   const stopTracking = useGpsStore((state) => state.stopTracking);
-  const { user } = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.user);
   const location = useGpsStore((state) => state.location);
 
   const { mutateAsync: setCoords, isPending: settingCoords } =
@@ -28,7 +28,7 @@ function App() {
       try {
         await setCoords({
           coords: [location.longitude, location.latitude],
-          id: user.id,
+          id: user?.user?.id,
         });
       } catch (err) {
         console.error("Failed to update database coordinates:", err);
@@ -36,7 +36,7 @@ function App() {
     };
 
     sendCoords();
-  }, [location, user?.id, setCoords]);
+  }, [location, user?.user?.id, setCoords]);
 
   useEffect(() => {
     startTracking();

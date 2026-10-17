@@ -1,18 +1,18 @@
 import useAuthStore from "@/store/authStore";
+import { Capacitor } from "@capacitor/core";
 import { QueryClient } from "@tanstack/react-query";
 
 export const queryClient = new QueryClient();
 
-// const BASE_URL =
-//   window.location.hostname === "localhost"
-//     ? "http://localhost:8000/api"
-//     : "https://panel-sends-limiting-olympus.trycloudflare.com/api";
+const BASE_URL = Capacitor.isNativePlatform()
+  ? "http://192.168.43.173:8000/api"
+  : "/api";
 
 export const fetchFn = async (url, options = {}) => {
   const { body, ...rest } = options;
   const isFormData = body instanceof FormData;
 
-  const res = await fetch(`api/${url}`, {
+  const res = await fetch(`${BASE_URL}/${url}`, {
     method: rest.method || "GET",
     headers: {
       // Only set JSON content-type if it's NOT FormData
