@@ -128,6 +128,21 @@ const empServices = {
 
     return { success: true, user: singleUser };
   },
+
+  getCoOrdinates: async ({ coords, id }) => {
+    const user = await User.findByIdAndUpdate(
+      id,
+      {
+        $set: { "location.coordinates": coords },
+      },
+      { runValidators: true, returnDocument: true },
+    );
+    return {
+      success: true,
+      location: user.location,
+      user: { id: user._id, name: `${user.firstname} ${user.lastname}` },
+    };
+  },
 };
 
 export default empServices;

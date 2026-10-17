@@ -79,7 +79,7 @@ function Sidebar({ children }) {
         </nav>
 
         {/* Main Page Content rendered here */}
-        <main className="flex-1 overflow-y-auto p-6 w-full bg-slate-50">
+        <main className="flex-1 overflow-y-auto px-2 py-3 w-full bg-slate-50">
           {children}
         </main>
       </div>

@@ -83,6 +83,11 @@ const userSchema = new mongoose.Schema(
     medicalDetails: [medicalRecordSchema],
     familyDetails: [familyMemberSchema],
     bankDetails: [bankDetailsSchema],
+
+    location: {
+      type: { type: String, default: "Point" },
+      coordinates: [Number], 
+    },
   },
   { timestamps: true },
 );

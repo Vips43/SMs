@@ -27,11 +27,11 @@ export const dateCompare = (a, b) => {
 
 export const userLocation = () => {
   return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
+    navigator.geolocation.watchPosition(
       (position) => {
         resolve({
+          longitude: position.coords.longitude,
           latitude: position.coords.latitude,
-          lognitude: position.coords.longitude,
         });
       },
       (error) => {
