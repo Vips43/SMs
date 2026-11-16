@@ -1,4 +1,4 @@
-import { Eye, Plus, SearchIcon } from "lucide-react";
+import { Eye, Plus, PlusIcon, SearchIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -30,15 +30,10 @@ function Employees() {
     page: empData.page,
   });
   const { mutateAsync: addUser, isFetching: addingUser, error } = useAddUser();
-  const {
-    register,
-    formState: { errors },
-    handleSubmit,
-  } = useForm();
+  const { register, formState: { errors }, handleSubmit, } = useForm();
 
-console.log(response)
-  
-const search = (data) => {
+
+  const search = (data) => {
     setEmpData((prev) => ({ ...prev, ...data, page: 1 }));
   };
 
@@ -49,15 +44,15 @@ const search = (data) => {
           tabIndex={0}
           role="button"
           className="btn btn-lg btn-circle btn-info">
-          S
+          <PlusIcon />
         </div>
 
         <div className="fab-close">
           Close <span className="btn btn-circle btn-lg btn-error">✕</span>
         </div>
 
-        <div className="bg-blue-300 pl-2 rounded-md">
-          Add emp
+        <div className="bg-blue-300 pl-1 rounded-md flex items-center justify-between gap-3 w-fit">
+          <span className="text-sm font-medium">Add Employee</span>
           <AddEmp
             type="add"
             onSubmitEmp={addUser}
@@ -65,8 +60,8 @@ const search = (data) => {
             loading={addingUser}
           />
         </div>
-        <div className="bg-blue-300 pl-2 rounded-md">
-          Show Sites
+        <div className="bg-blue-300 pl-1 rounded-md flex items-center justify-between gap-3 w-fit">
+          <span className="text-sm font-medium">Show Sites</span>
           <ModalButton
             id="showSiteModal"
             onClick={() => {
@@ -81,41 +76,47 @@ const search = (data) => {
             <ShowSites show={toggle.sites} />
           </ModalButton>
         </div>
-        <div className="bg-blue-300 pl-2 rounded-md">
-          Add Site
+        <div className="bg-blue-300 pl-1 rounded-md flex items-center justify-between gap-3 w-fit">
+          <span className="text-sm font-medium">Add Site</span>
           <ModalButton
             id="addSiteModal"
             onClick={() => {
               setToggle((prev) => ({ ...prev, sites: !prev.sites }));
             }}
             title={<Plus className="w-4 h-4" />}
-            btn="btn-sm btn-primary">
+            btn="btn-md btn-primary">
             <AddSite />
           </ModalButton>
         </div>
       </div>
 
-      <div className="shrink-0 flex justify-end items-center gap-3 mb-4 p-2">
+      <div className="shrink-0 flex justify-end items-center gap-1 p-2">
         <h3 className="text-2xl font-semibold mr-auto">Employees</h3>
         <div className="flex ml-auto items-center gap-3">
           <button
+            type="button"
             className="btn btn-neutral btn-square"
-            onClick={() =>
-              setToggle((prev) => ({ ...prev, search: !prev.search }))
-            }>
+            popoverTarget="popover-1"
+            style={{ anchorName: "--anchor-1" }}
+          >
             <SearchIcon />
           </button>
         </div>
       </div>
-      {toggle.search && (
-        <div className="mb-4">
-          <Search
-            register={register}
-            errors={errors}
-            onSubmit={handleSubmit(search)}
-          />
-        </div>
-      )}
+
+      <div
+        className="dropdown dropdown-end menu bg-base-100 rounded-box shadow-md p-4 mt-2"
+        popover="auto"
+        id="popover-1"
+        style={{ positionAnchor: "--anchor-1" }}
+      >
+        <Search
+          register={register}
+          errors={errors}
+          onSubmit={handleSubmit(search)}
+        />
+      </div>
+
       {/* Added min-h-[350px] or padding-bottom to give room for dropdowns */}
       <EmployeeList response={response} responding={responding} />
     </div>

@@ -42,12 +42,33 @@ const advanceSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
 });
 
+const addressFields = {
+  l1: { type: String, default: "", trim: true },
+  l2: { type: String, default: "", trim: true },
+  l3: { type: String, default: "", trim: true },
+  state: { type: String, default: "", trim: true },
+  city: { type: String, default: "", trim: true },
+  pincode: { type: String, default: "", trim: true },
+};
+
+const yesNoField = {
+  type: String,
+  enum: ["yes", "no"],
+  default: "no",
+  lowercase: true,
+  trim: true,
+};
+
 const userSchema = new mongoose.Schema(
   {
     firstname: { type: String },
     middlename: { type: String },
     lastname: { type: String },
-    gender: { type: String },
+    gender: {
+      type: String,
+      default: "",
+      enum: ["male", "female", "other", ""],
+    },
     religion: {
       type: String,
       default: "hindu",
@@ -81,9 +102,13 @@ const userSchema = new mongoose.Schema(
     userType: { type: String, default: "" },
     dob: { type: Date },
     advance: [advanceSchema],
-    currAddress: { type: String, default: "" },
-    residAddress: { type: String, default: "" },
-    bloodGroup: { type: String, default: "N/A" },
+
+    address: { present: addressFields, permanent: addressFields },
+    bloodGroup: {
+      type: String,
+      default: "N/A",
+      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "N/A"],
+    },
 
     site: { type: mongoose.Schema.Types.ObjectId, ref: "Site" },
     attendence: { type: mongoose.Schema.Types.ObjectId, ref: "Attendence" },
@@ -100,13 +125,25 @@ const userSchema = new mongoose.Schema(
     salaryHistory: [salaryRecordSchema],
 
     resume: { type: String },
-    govtIds: { id: String, name: String },
+    govtIds: {
+      adhaar_number: String,
+      adhaar_card: String,
+      pan_number: String,
+      pan_card: String,
+      voter_number: String,
+      voter_card: String,
+    },
+
     joiningDate: { type: Date, default: null },
     policeVerification: { type: String, default: "notDone" },
 
     medicalDetails: [medicalRecordSchema],
     familyDetails: [familyMemberSchema],
     bankDetails: [bankDetailsSchema],
+
+    hospitalised: yesNoField,
+    physically_disabled: yesNoField,
+    political_conn: yesNoField,
 
     location: {
       type: { type: String, default: "Point" },

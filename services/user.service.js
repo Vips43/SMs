@@ -108,6 +108,8 @@ const userService = {
   editUser: async (creds, id, reqUser) => {
     if (!["admin", "operator"].includes(reqUser.role))
       throw createError("You dont have access", 400);
+    if (reqUser.role === "operator" && creds.role === "admin")
+      throw createError("you cant set user as admin ", 409);
     if (creds.advance) {
       const { advance: _, ...advanceData } = creds;
       const newAdvanceEntry = { ...advanceData, givenBy: reqUser.id };

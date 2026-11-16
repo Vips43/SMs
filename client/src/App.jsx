@@ -14,6 +14,7 @@ import { useGetCoOrdinatesMutation } from "./hooks/empHooks";
 import Advance from "./pages/Advance";
 import useDocumentTitle from "./hooks/useDocumentTitle";
 import useNotifications from "./components/oth/Notifications";
+import AddEmployeeForm from "./components/employee/AddEmployeeForm";
 
 
 function App() {
@@ -28,7 +29,6 @@ function App() {
   const location = useGpsStore((state) => state.location);
 
   const { mutateAsync: setCoords } = useGetCoOrdinatesMutation();
-
 
   useEffect(() => {
     if (!location || !user?.user?.id) return;
@@ -59,6 +59,7 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route element={<Layout />}>
 
+          <Route path="/add" element={<AddEmployeeForm />} />
           <Route element={<ProtectedRoutes role={["admin", "operator"]} />}>
             <Route path="/employee" element={<Employees />} />
           </Route>
@@ -77,8 +78,8 @@ function App() {
             element={
               <ProtectedRoutes role={["admin", "operator", "employee"]} />
             }>
-              <Route path="/attendence" element={<Attendence />} />
-              <Route path="/advance" element={<Advance />} />
+            <Route path="/attendence" element={<Attendence />} />
+            <Route path="/advance" element={<Advance />} />
           </Route>
         </Route>
 

@@ -4,7 +4,7 @@ import { dateFormat } from "@/utils/helperfn";
 import { useState } from "react";
 
 function Advance() {
-  const [state, setState] = useState({ page: 1, limit: 15, date: null });
+  const [state, setState] = useState({ page: 1, limit: 15, date: new Date().toISOString().split("T")[0] });
 
   const { data: advanceData } = useGetAdvances({
     date: state.date,
@@ -22,6 +22,7 @@ function Advance() {
         <input
           type="date"
           className="input max-w-fit"
+          value={state.date}
           onChange={(e) => setState((prev) => ({ ...prev, date: e.target.value || null, page: 1 }))}
         />
       </div>

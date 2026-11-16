@@ -5,7 +5,6 @@ import { fetchFn } from "@/utils/queryClient";
 export default function useNotifications(userId) {
   useEffect(() => {
 
-
     if (!userId) {
       console.log("Skipping notifications: No userId provided yet.");
       return;
@@ -17,7 +16,6 @@ export default function useNotifications(userId) {
       }
     });
 
-    console.log('Setting up foreground message listener...');
     const unsubscribe = onForegroundMessage((payload) => {
       console.log("Foreground message received:", payload);
 

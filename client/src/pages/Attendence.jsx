@@ -175,7 +175,7 @@ function ShowEmpAttendence({ handleMark, isMarking, user, loadingAttdnc, history
               <>
                 <span>Mark Out</span>
                 <span className="text-4xl">✕</span>
-                <span className="text-2xl">{checkInTimeFormatted}</span>
+                {/* <span className="text-2xl">{checkInTimeFormatted}</span> */}
               </>
             )}
           </button>

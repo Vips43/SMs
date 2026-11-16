@@ -5,11 +5,11 @@ import Duty from "../models/dutyModel.js";
 import User from "../models/userModel.js";
 import { getDistanceInMeteres } from "../utils/helperFunction.js";
 
-export const startEndDate = (date) => {
-  const targetDate = date ? new Date(date) : new Date();
+export const startEndDate = (start) => {
+  const startDate = start ? new Date(start) : new Date();
 
-  const startOfDay = new Date(targetDate.setUTCHours(0, 0, 0, 0));
-  const endOfDay = new Date(targetDate.setUTCHours(23, 59, 59, 999));
+  const startOfDay = new Date(startDate.setUTCHours(0, 0, 0, 0));
+  const endOfDay = new Date(startDate.setUTCHours(23, 59, 59, 999));
 
   return { startOfDay, endOfDay };
 };
@@ -372,9 +372,22 @@ export default empServices;
 
 export const dutyServices = {
   createDuty: async (data) => {
-    const user = await User.findById(data.id);
-    if (!user) throw createError("User not found", 404);
+    const { startOfDay: start, endOfDay: startE } = startEndDate(
+      data.startTime,
+    );
+    const { startOfDay: endS, endOfDay: end } = startEndDate(data.endTime);
 
+    const user = await User.findById(data.id).populate({
+      path: "dutyRecords",
+      match: {
+        startTime: { $gte: start, $lte: startE },
+        endTime: { $gte: endS, $lte: end },
+      },
+    });
+
+    if (user && user.dutyRecords && user.dutyRecords.length > 0) {
+      throw createError("Duty already exists on same day", 409);
+    }
     const newDuty = await Duty.create({
       instruction: data.instruction,
       startTime: data.startTime,
@@ -382,6 +395,9 @@ export const dutyServices = {
       site: data.site,
       user: data.id,
     });
+
+    user.dutyTime = { startTime: newDuty.startTime, endTime: newDuty.endTime };
+    await user.save();
 
     if (!newDuty) throw createError("Duty not created", 400);
 
@@ -419,14 +435,24 @@ export const dutyServices = {
     };
   },
 
-  getDuty: async (date) => {
-    const { startOfDay, endOfDay } = startEndDate(date);
-    const filter = date
-      ? { startTime: { $gte: startOfDay, $lte: endOfDay } }
-      : {};
+  getDuty: async ({ date, id } = {}) => {
+    const filter = {};
+
+    if (id) {
+      filter.user = id;
+    }
+
+    if (date) {
+      const { startOfDay, endOfDay } = startEndDate(date);
+      filter.startTime = { $gte: startOfDay, $lte: endOfDay };
+    }
+
     const duties = await Duty.find(filter)
       .populate({ path: "user", select: "firstname lastname role email phone" })
+      .populate({ path: "site", select: "name address" })
+      .sort({ startTime: 1 })
       .lean();
+
     return duties;
   },
 };

@@ -18,7 +18,7 @@ function Dashboard() {
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
   const { data: userStats, isLoading: dashLoading } = useGetDashboardUserStats(date);
   const { data: statsData, isPending: gettingStats } = useGetDashboardStats(date);
-  const { data: dutyData, } = useGetDuties(currentDate);
+  const { data: dutyData, } = useGetDuties({ date: currentDate });
 
   if (dashLoading || gettingStats) {
     return (

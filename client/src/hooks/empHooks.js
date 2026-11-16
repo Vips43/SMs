@@ -236,11 +236,18 @@ const useAddDuty = () => {
   });
 };
 
-const useGetDuties = (date, options = {}) => {
+const useGetDuties = ({ date = "", id = "" } = {}, options = {}) => {
   return useQuery({
-    queryKey: ["duty", { date }],
+    queryKey: ["duty", { date, id }],
     queryFn: async () => {
-      const res = await fetchFn(`emp/duty?date=${date}`);
+      const params = new URLSearchParams();
+      if (date) params.append("date", date);
+      if (id) params.append("id", id);
+
+      const queryString = params.toString();
+      const url = queryString ? `emp/duty?${queryString}` : "emp/duty";
+
+      const res = await fetchFn(url);
       return res;
     },
     ...options,

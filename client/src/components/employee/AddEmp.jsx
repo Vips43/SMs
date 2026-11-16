@@ -7,6 +7,7 @@ import InputFile from "../form/InputFile";
 import { useUploadFile } from "@/hooks/empHooks";
 import { useGetSiteQuery } from "@/hooks/siteHooks";
 import { Pencil, Trash2 } from "lucide-react";
+import { useFormPersist } from "@/hooks/useFormPersist";
 
 const PVoptions = [
   { label: "Done", value: "done" },
@@ -26,7 +27,7 @@ const roleOptions = [
   { value: "admin", label: "Admin" },
   { value: "employee", label: "Employee" },
   { value: "operator", label: "Operator" },
-]
+];
 
 const religiousOptions = [
   { value: "hindu", label: "Hindu" },
@@ -38,7 +39,45 @@ const religiousOptions = [
   { value: "parsi", label: "Parsi / Zoroastrian" },
   { value: "jewish", label: "Jewish" },
   { value: "other", label: "Other" },
-]
+];
+
+const govtIdsArray = [
+  {
+    id: "aadhaar",
+    title: "Aadhaar Card",
+    numberField: { name: "adhaar_number", label: "Adhaar Number" },
+    fileField: { name: "adhaar_card", label: "Upload Adhaar" },
+  },
+  {
+    id: "pan",
+    title: "PAN Card",
+    numberField: { name: "pan_number", label: "PAN Number" },
+    fileField: { name: "pan_card", label: "Upload PAN" },
+  },
+  {
+    id: "voter",
+    title: "Voter ID",
+    numberField: { name: "voter_number", label: "Voter ID Number" },
+    fileField: { name: "voter_card", label: "Upload Voter ID" },
+  },
+];
+
+const bloodGroupOptions = [
+  { label: "N/A", name: "N/A" },
+  { label: "A+", name: "A+" },
+  { label: "A-", name: "A-" },
+  { label: "B+", name: "B+" },
+  { label: "B-", name: "B-" },
+  { label: "AB+", name: "AB+" },
+  { label: "AB-", name: "AB-" },
+  { label: "O+", name: "O+" },
+  { label: "O-", name: "O-" },
+];
+
+const otherOptions = [
+  { label: "Yes", value: "yes" },
+  { label: "No", value: "no" },
+];
 
 const formatDateForInput = (dateString) => {
   if (!dateString) return "";
@@ -47,7 +86,7 @@ const formatDateForInput = (dateString) => {
 };
 
 function getDefaults(user) {
-  return ({
+  return {
     firstname: user?.firstname || "",
     middlename: user?.middlename || "",
     lastname: user?.lastname || "",
@@ -62,9 +101,19 @@ function getDefaults(user) {
     site: user?.site?._id || undefined,
     userType: user?.userType || "trainee",
     dob: formatDateForInput(user?.dob),
-    residAddress: user?.residAddress || "",
-    currAddress: user?.currAddress || "",
-    govtIds: user?.govtIds || { id: "", name: "" },
+    address: user?.address || {
+      present: { l1: "", l2: "", l3: "", state: "", city: "", pincode: "" },
+      permanent: { l1: "", l2: "", l3: "", state: "", city: "", pincode: "" },
+    },
+
+    govtIds: {
+      adhaar_number: user?.govtIds?.adhaar_number || "",
+      adhaar_card: user?.govtIds?.adhaar_card || "",
+      pan_number: user?.govtIds?.pan_number || "",
+      pan_card: user?.govtIds?.pan_card || "",
+      voter_number: user?.govtIds?.voter_number || "",
+      voter_card: user?.govtIds?.voter_card || "",
+    },
     policeVerification: user?.policeVerification || "notDone",
     bloodGroup: user?.bloodGroup || "N/A",
     joiningDate: formatDateForInput(user?.joiningDate),
@@ -88,17 +137,27 @@ function getDefaults(user) {
         ? user?.salaryDetails?.allowance
         : [{ name: "", amount: "" }],
     },
-  })
-};
+    hospitalised: user?.hospitalised || "no",
+    physically_disabled: user?.physically_disabled || "no",
+    political_conn: user?.political_conn || "no",
+  };
+}
 
-function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) {
+function AddEmp({
+  type = "add",
+  user = null,
+  onSubmitEmp,
+  userError,
+  loading,
+  modalId: customModalId,
+}) {
   const [uploading, setUploading] = useState(false);
   const { mutateAsync: uploadFileMutation } = useUploadFile();
   const { data: sites } = useGetSiteQuery();
 
   const sitesOptions = sites?.map((s) => ({ value: s._id, label: s.name }));
   const modalId =
-    type === "edit" && user?._id ? `modal_emp_${user._id}` : "modal_add_emp";
+    customModalId || (type === "edit" && user?._id ? `modal_emp_${user._id}` : "modal_add_emp");
 
   const {
     register,
@@ -109,6 +168,12 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
     watch,
     formState: { errors },
   } = useForm({ defaultValues: getDefaults(user) });
+
+  const storageKey = modalId;
+  const { clearPersistedData } = useFormPersist(storageKey, watch, setValue, {
+    enabled: type === "add" || type === "edit",
+    excludeFields: ["password"],
+  });
 
   useEffect(() => {
     if (type === "edit" && user) reset(getDefaults(user));
@@ -138,6 +203,13 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
     remove: removeAllowance,
   } = useFieldArray({ control, name: "salaryDetails.allowance" });
 
+  useEffect(() => {
+    govtIdsArray.forEach((item) => {
+      register(`govtIds.${item.numberField.name}`);
+      register(`govtIds.${item.fileField.name}`);
+    });
+  }, [register]);
+
   const onSubmit = async (formData) => {
     const payload = { creds: formData, id: user?._id };
     try {
@@ -146,6 +218,7 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
       toast.success(
         responseData?.msg || (type === "edit" ? "User Edited" : "User Created"),
       );
+      clearPersistedData();
       document.getElementById(modalId)?.close();
     } catch (error) {
       toast.error(error?.msg || error?.message || "Employee save failed");
@@ -165,7 +238,8 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
       const fileUrl = res?.results?.[0]?.filepath || res?.filepath;
       if (!fileUrl) throw new Error("No file URL returned");
 
-      setValue(fieldName, fileUrl, { shouldDirty: true });
+      setValue(fieldName, fileUrl, { shouldDirty: true, shouldTouch: true });
+
       toast.success(successMessage);
     } catch {
       toast.error("File upload failed");
@@ -177,7 +251,14 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
 
   const photo = watch("photo");
   const resume = watch("resume");
+  const same = watch("same");
+  const presentAddress = watch("address.present");
 
+  useEffect(() => {
+    if (same) {
+      setValue("address.permanent", presentAddress, { shouldValidate: true });
+    }
+  }, [same, setValue, presentAddress]);
 
   return (
     <>
@@ -186,14 +267,17 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
         className={`
           ${type === "edit"
             ? "btn btn-outline btn-sm btn-info"
-            : "btn btn-primary btn-md text-base btn-square"}`
+            : "btn btn-primary btn-md text-base btn-square"
+          }`}
+        onClick={() =>
+          document.getElementById(modalId)?.showModal()
         }
-        onClick={() => document.getElementById(modalId).showModal()}>
+      >
         {type === "edit" ? <Pencil className="h-4 w-4" /> : "+"}
-      </button >
+      </button>
 
       <dialog id={modalId} className="modal">
-        <div className="modal-box max-w-4xl max-h-[90vh] bg-base-100 flex flex-col p-0">
+        <div className="modal-box min-w- max-w-4xl max-h-[90vh] bg-base-100 flex flex-col p-0">
           {/* Modal Header */}
           <div className="sticky top-0 z-20 bg-base-100 navbar px-6 border-b border-base-300">
             <div className="flex-1 gap-4">
@@ -207,9 +291,6 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
                   {user.active ? "Active" : "Inactive"}
                 </span>
               )}
-
-
-              {userError?.message && <p className="text-red-600">{userError?.message}</p>}
             </div>
             <button
               type="button"
@@ -222,7 +303,7 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
           {/* Form Body */}
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="flex flex-col flex-1 overflow-y-auto p-6 gap-6">
+            className="flex flex-col flex-1 overflow-y-auto md:p-6 gap-2 md:gap-6">
             {/* Basic Info Card */}
             <div className="card bg-base-200 outline outline-gray-400 shadow-sm p-4">
               <h4 className="font-semibold text-lg mb-4">Basic Information</h4>
@@ -294,66 +375,7 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
                   register={register}
                   name="gender"
                   label="Gender"
-                />
-
-                <InputField
-                  label="Department"
-                  name="department"
-                  type="text"
-                  register={register}
-                />
-
-                {/* Photo Upload */}
-                <div className="form-control gap-1">
-                  <input type="hidden" {...register("photo")} />
-                  <InputFile
-                    id="photo"
-                    label="Employee Photo"
-                    allowed="image/*"
-                    onChange={(e) =>
-                      handleFileUpload(
-                        e,
-                        "photo",
-                        "Photo uploaded successfully!",
-                      )
-                    }
-                  />
-                  {photo && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <img
-                        src={photo}
-                        alt="Preview"
-                        className="h-12 w-12 object-cover rounded-box border border-base-300"
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-xs btn-outline btn-error"
-                        onClick={() =>
-                          setValue("photo", "", { shouldDirty: true })
-                        }>
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-
-
-                <SelectField
-                  error={errors}
-                  options={sitesOptions}
-                  register={register}
-                  name="site"
-                  label="Select Site"
-                />
-
-                <SelectField
-                  error={errors}
-                  options={UToptions}
-                  register={register}
-                  name="userType"
-                  label="User Type"
-                />
+                />              
 
                 <InputField
                   label="DOB"
@@ -361,7 +383,7 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
                   type="date"
                   register={register}
                 />
-                <InputField
+                {/* <InputField
                   label="Residential Address"
                   name="residAddress"
                   register={register}
@@ -370,10 +392,12 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
                   label="Current Address"
                   name="currAddress"
                   register={register}
-                />
-                <InputField
+                /> */}
+                <SelectField
                   label="Blood Group"
                   name="bloodGroup"
+                  error={errors}
+                  options={bloodGroupOptions}
                   register={register}
                 />
 
@@ -382,7 +406,7 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
                   <input type="hidden" {...register("resume")} />
                   <InputFile
                     id="resume"
-                    label="Resume"
+                    label="Upload Resume"
                     onChange={(e) =>
                       handleFileUpload(
                         e,
@@ -401,43 +425,226 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
                     </a>
                   )}
                 </div>
+              </div>
+            </div>
 
+            {/* addresses  */}
+            <div className="col-span-full space-y-2">
+              <div className="grid grid-cols-3 gap-x-2 outline outline-gray-400 p-4 rounded-md">
+                <h3 className="col-span-full font-semibold text-lg mb-3">
+                  Present Address
+                </h3>
                 <InputField
-                  label="Joining Date"
-                  name="joiningDate"
-                  type="date"
+                  error={errors}
+                  showLabel={false}
+                  name={"address.present.l1"}
+                  label={"ex: Room no / area / road "}
                   register={register}
                 />
-                <SelectField
+                <InputField
                   error={errors}
-                  options={PVoptions}
+                  showLabel={false}
+                  name={"address.present.l2"}
+                  label={"ex: near by/ landmark"}
                   register={register}
-                  name="policeVerification"
-                  label="Police Verification"
+                />
+                <InputField
+                  error={errors}
+                  showLabel={false}
+                  name={"address.present.l3"}
+                  label={"Line 3"}
+                  register={register}
+                />
+                <InputField
+                  error={errors}
+                  showLabel={false}
+                  name={"address.present.state"}
+                  label={"State"}
+                  register={register}
+                />
+                <InputField
+                  error={errors}
+                  showLabel={false}
+                  name={"address.present.city"}
+                  label={"City"}
+                  register={register}
+                />
+                <InputField
+                  error={errors}
+                  showLabel={false}
+                  name={"address.present.pincode"}
+                  label={"Pincode"}
+                  register={register}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-x-2 outline outline-gray-400 p-4 rounded-md">
+                <h3 className="col-span-full font-semibold text-lg flex justify-between mb-3">
+                  Permanent Address
+                  <label className="text-sm font-normal outline outline-gray-400 bg-gray-200 px-2 py-0.5 rounded-md">
+                    Same as above &nbsp;
+                    <input
+                      type="checkbox"
+                      name="same"
+                      {...register("same")}
+                      className="checkbox"
+                    />
+                  </label>
+                </h3>
+                <InputField
+                  error={errors}
+                  showLabel={false}
+                  name={"address.permanent.l1"}
+                  label={"ex: Room no / area / road "}
+                  register={register}
+                />
+                <InputField
+                  error={errors}
+                  showLabel={false}
+                  name={"address.permanent.l2"}
+                  label={"ex: near by/ landmark"}
+                  register={register}
+                />
+                <InputField
+                  error={errors}
+                  showLabel={false}
+                  name={"address.permanent.l3"}
+                  label={"Line 3"}
+                  register={register}
+                />
+                <InputField
+                  error={errors}
+                  showLabel={false}
+                  name={"address.permanent.state"}
+                  label={"State"}
+                  register={register}
+                />
+                <InputField
+                  error={errors}
+                  showLabel={false}
+                  name={"address.permanent.city"}
+                  label={"City"}
+                  register={register}
+                />
+                <InputField
+                  error={errors}
+                  showLabel={false}
+                  name={"address.permanent.pincode"}
+                  label={"Pincode"}
+                  register={register}
                 />
               </div>
             </div>
 
+            {/* official infos  */}
+            <div className="col-span-full grid grid-cols-1 md:grid-cols-3 gap-x-2 outline outline-gray-400 p-4 my-2 rounded-md">
+              <h3 className="col-span-full text-lg font-semibold mb-4">
+                Professionals info
+              </h3>
+
+              <InputField
+                label="Joining Date"
+                name="joiningDate"
+                type="date"
+                register={register}
+              />
+
+              <SelectField
+                error={errors}
+                options={PVoptions}
+                register={register}
+                name="policeVerification"
+                label="Police Verification"
+              />
+
+              <SelectField
+                error={errors}
+                options={sitesOptions}
+                register={register}
+                name="site"
+                label="Select Site"
+              />
+
+              <SelectField
+                error={errors}
+                options={UToptions}
+                register={register}
+                name="userType"
+                label="User Type"
+              />
+
+              <InputField
+                label="Department"
+                name="department"
+                type="text"
+                register={register}
+              />
+            </div>
+
             {/* Government ID Card */}
-            <div className="card bg-base-200 shadow-sm outline outline-gray-400 p-4">
-              <h4 className="font-semibold text-lg mb-4">Government ID</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputField
-                  label="ID Number"
-                  name="govtIds.id"
-                  placeholder="e.g. Aadhaar / PAN"
-                  register={register}
-                />
-                <InputField
-                  label="ID Name"
-                  name="govtIds.name"
-                  register={register}
-                />
+            <div className="card bg-base-100 shadow-md border border-base-300 p-3 md:p-5 rounded-xl space-y-4">
+              <h3 className="font-bold text-lg">Government Identification</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {govtIdsArray?.map((item) => {
+                  const numberPath = `govtIds.${item.numberField.name}`;
+                  const filePath = `govtIds.${item.fileField.name}`;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="bg-base-200/50 border p-4 rounded-lg flex flex-col gap-4"
+                    >
+                      <h4 className="font-semibold">{item.title}</h4>
+
+                      <InputField
+                        label={item.numberField.label}
+                        name={numberPath}
+                        type="text"
+                        register={register}
+                      />
+
+                      <input type="hidden" {...register(filePath)} />
+
+                      {watch(filePath) && (
+                        <div className="flex flex-col gap-2">
+                          <img
+                            src={watch(filePath)}
+                            alt={item.title}
+                            className="h-24 w-auto object-contain"
+                          />
+
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-error"
+                            onClick={() =>
+                              setValue(filePath, "", { shouldDirty: true })
+                            }
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+
+                      <InputFile
+                        id={filePath}
+                        label={item.fileField.label}
+                        disabled={uploading}
+                        onChange={(e) =>
+                          handleFileUpload(
+                            e,
+                            filePath,
+                            `${item.title} uploaded successfully!`
+                          )
+                        }
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Certificate Details Card */}
-            <div className="card bg-base-200 shadow-sm outline outline-gray-400 p-4">
+            <div className="card bg-base-200 shadow-sm outline outline-gray-400 p-2 md:p-4">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="font-semibold text-lg">Certificate Details</h4>
                 <button
@@ -523,7 +730,7 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
             </div>
 
             {/* Family Details Card */}
-            <div className="card bg-base-200 outline outline-gray-400 shadow-sm p-4">
+            <div className="card bg-base-200 outline outline-gray-400 shadow-sm p-2 md:p-4">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="font-semibold text-lg">Family Details</h4>
                 <button
@@ -547,24 +754,28 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
                   <div
                     key={field.id}
                     className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center bg-base-100 p-1 rounded-box">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-start gap-2">
                       <label className="label flex flex-col cursor-pointer gap-3">
-                        <span className="label-text font-semibold text-black text-sm">Emergency</span>
+                        <span className="label-text m-1 mb-0 font-semibold text-black text-base">
+                          Emergency
+                        </span>
                         <input
                           type="checkbox"
                           {...register(`familyDetails.${index}.emergency`)}
                           className="checkbox checkbox-primary checkbox-sm"
                         />
                       </label>
-                      <InputField
-                        label="Name"
-                        name={`familyDetails.${index}.name`}
-                        register={register}
-                      />
+                      <div className="flex-1">
+                        <InputField
+                          label="Relation"
+                          name={`familyDetails.${index}.relation`}
+                          register={register}
+                        />
+                      </div>
                     </div>
                     <InputField
-                      label="Relation"
-                      name={`familyDetails.${index}.relation`}
+                      label="Name"
+                      name={`familyDetails.${index}.name`}
                       register={register}
                     />
                     <InputField
@@ -572,7 +783,7 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
                       name={`familyDetails.${index}.email`}
                       register={register}
                     />
-                    <div className="flex gap-2 items-end">
+                    <div className="flex gap-2 items-center">
                       <div className="flex-1">
                         <InputField
                           label="Phone"
@@ -595,7 +806,7 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
             </div>
 
             {/* Bank Details Card */}
-            <div className="card bg-base-200 outline outline-gray-400 shadow-sm p-4">
+            <div className="card bg-base-200 outline outline-gray-400 shadow-sm p-2 md:p-4">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="font-semibold text-lg">Bank Details</h4>
                 <button
@@ -646,9 +857,9 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
             </div>
 
             {/* Salary Information Card */}
-            <div className="card bg-base-200 outline outline-gray-400 shadow-sm p-4">
+            <div className="card bg-base-200 outline outline-gray-400 shadow-sm p-2 md:p-4">
               <h4 className="font-semibold text-lg mb-4">Salary Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-2 md:gap-4 mb-4">
                 <InputField
                   register={register}
                   error={errors}
@@ -725,8 +936,40 @@ function AddEmp({ type = "add", user = null, onSubmitEmp, userError, loading }) 
               </div>
             </div>
 
+            {/* other qestions  */}
+            <div className="grid grid-cols-3 gap-x-2 outline outline-gray-400 p-4 rounded-lg">
+              <h3 className="col-span-full font-semibold text-lg mb-2">
+                Other Questions
+              </h3>
+              <SelectField
+                error={errors}
+                options={otherOptions}
+                name={"hospitalised"}
+                label={"Hospitalsed Previously"}
+                register={register}
+              />
+              <SelectField
+                error={errors}
+                options={otherOptions}
+                name={"physically_disabled"}
+                label={"Physically disabled"}
+                register={register}
+              />
+              <SelectField
+                error={errors}
+                options={otherOptions}
+                name={"political_conn"}
+                label={"Political connection"}
+                register={register}
+              />
+            </div>
+
             {/* Modal Actions */}
             <div className="modal-action mt-4">
+              {userError?.message && (
+                <p className="text-red-600">{userError?.message}</p>
+              )}
+
               <button
                 type="submit"
                 disabled={loading || uploading}

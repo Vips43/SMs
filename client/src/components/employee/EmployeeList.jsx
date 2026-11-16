@@ -4,7 +4,7 @@ import InputField from "../form/InputField";
 import AddEmp from "./AddEmp";
 import ModalButton from "../oth/ModalButton";
 import EmpCard, { EmpDetails } from "./EmpCard";
-import { AlarmClock, Eye, IndianRupee, LockKeyholeOpenIcon, Notebook } from "lucide-react";
+import { AlarmClock, Eye, IndianRupee, LockKeyholeOpenIcon, Notebook, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { dateFormat } from "@/utils/helperfn";
@@ -14,6 +14,8 @@ import { useGetSiteQuery } from "@/hooks/siteHooks";
 function EmployeeList({ response, responding }) {
   const [selecteduser, setSelecteduser] = useState({});
   const [toggle, setToggle] = useState(false);
+
+  const [editingUserObj, setEditingUserObj] = useState(null);
 
   const { mutateAsync: editUser, isFetching: editingUser } = useEditUser();
   const { mutateAsync: markActive } = useMarkActiveMutation();
@@ -25,7 +27,7 @@ function EmployeeList({ response, responding }) {
     <div className="flex-1 min-h-0 m-1 flex flex-col overflow-hidden shadow-lg">
       {/* Scrollable container for tbody */}
       <div className="flex-1 min-h-0 overflow-auto w-full">
-        <table className="table table-pin-rows  w-full min-w-5xl">
+        <table className="table table-pin-rows  w-full min-w-max">
           <thead>
             <tr className="bg-gray-200">
               <th>#</th>
@@ -78,14 +80,17 @@ function EmployeeList({ response, responding }) {
                       e.stopPropagation();
                     }}>
                     <div className="tooltip" data-tip='Edit'>
-                      <AddEmp
-                        type="edit"
-                        user={user}
-                        onSubmitEmp={editUser}
-                        loading={editingUser}
-                      />
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm btn-info"
+                        onClick={() => {
+                          setEditingUserObj(user);
+                          document.getElementById("modal_shared_edit_emp")?.showModal();
+                        }}>
+                        <Pencil className="h-4 w-4" />
+                      </button>
                     </div>
-
+                    {/* show emp  */}
                     <div className="tooltip" data-tip='View'>
                       <ModalButton
                         id={`view-emp-modal-${user._id}`}
@@ -102,17 +107,19 @@ function EmployeeList({ response, responding }) {
                         )}
                       </ModalButton>
                     </div>
+                    {/* change Duty  */}
                     <div className="tooltip" data-tip='change Duty time'>
                       <ModalButton
                         id={`cd-emp-modal-${user._id}`}
                         title={<AlarmClock className="h-4.5" />}
-                        btn="btn-accent btn-sm"
+                        btn="btn-info btn-sm"
                         onClick={() => setSelecteduser(user)}>
                         {selecteduser?._id === user?._id && (
                           <ChangeDutyTime user={selecteduser} sites={sites} />
                         )}
                       </ModalButton>
                     </div>
+                    {/* change password  */}
                     <div className="tooltip" data-tip='change password'>
                       <ModalButton
                         id={`cp-emp-modal-${user._id}`}
@@ -160,6 +167,15 @@ function EmployeeList({ response, responding }) {
           </tbody>
         </table>
       </div>
+      {editingUserObj && (
+        <AddEmp
+          type="edit"
+          user={editingUserObj}
+          onSubmitEmp={editUser}
+          loading={editingUser}
+          modalId="modal_shared_edit_emp"
+        />
+      )}
     </div>
   );
 }
@@ -169,11 +185,7 @@ export default EmployeeList;
 function ChangePassword({ user }) {
   const [resp, setResp] = useState({ res: {}, err: {} });
   const { mutateAsync: changePassword } = useChangePassword();
-  const {
-    register,
-    formState: { errors },
-    handleSubmit,
-  } = useForm({
+  const { register, formState: { errors }, handleSubmit, } = useForm({
     defaultValues: {
       name: `${user?.firstname} ${user?.lastname}`,
       email: user.email || "",
@@ -196,7 +208,7 @@ function ChangePassword({ user }) {
 
   return (
     <div>
-      <form onSubmit={handleSubmit(submit)} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit(submit)} className="flex flex-col gap-4 px-8">
         <h3 className="text-2xl font-semibold mb-5">Change password</h3>
         <div className="grid grid-cols-3 gap-3">
           <InputField
@@ -220,6 +232,7 @@ function ChangePassword({ user }) {
             label={"Password"}
             type="password"
             name={"password"}
+            placeholder='*******'
           />
 
           {message && (
