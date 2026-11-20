@@ -4,15 +4,17 @@ import SelectField from "../form/SelectField";
 import { useAddDuty, useGetDuties } from "@/hooks/empHooks";
 import { dateFormat } from "@/utils/helperfn";
 
-function ChangeDutyTime({ user, sites }) {
+function ChangeDutyTime({ user, sites, onSuccess }) {
   const defaultVals = {
-    site: user?.site?._id || user?.site?.id || "",
+    site: user?.site?.id || "N/A",
+    date: user?.duty?.date || null,
+    startTime: user?.duty?.startTime || "10:00",
+    endTime: user?.duty?.endTime || "19:00",
   };
 
+  console.log(user)
   const { mutateAsync: addDuty, isPending: addingDuty, error } = useAddDuty();
   const { data: duties } = useGetDuties({ id: user?._id, date: "" }, {});
-
-  console.log(duties, user?._id);
 
   const {
     handleSubmit,
@@ -28,8 +30,11 @@ function ChangeDutyTime({ user, sites }) {
       ...data,
       id: user._id,
     };
+    console.log(payload)
     const result = await addDuty(payload);
-    console.log(result);
+
+    onSuccess()
+
   };
 
   return (
@@ -38,34 +43,46 @@ function ChangeDutyTime({ user, sites }) {
         Change Duty Time
       </h3>
       <form onSubmit={handleSubmit(submit)} className="mt-5 px-3 flex flex-col">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2">
           <InputField
             name={"instruction"}
             register={register}
             error={errors}
             label={"Enter Instruction"}
           />
+
           <InputField
-            type="datetime-local"
+            type="date"
+            name={"date"}
+            register={register}
+            error={errors}
+            label={"Choose Date"}
+          />
+
+          <InputField
+            type="time"
             name={"startTime"}
             register={register}
             error={errors}
-            label={"Choose Start Date"}
+            label={"Choose Start Time"}
           />
+
           <InputField
-            type="datetime-local"
+            type="time"
             name={"endTime"}
             register={register}
             error={errors}
             label={"Choose End Time"}
           />
-          <SelectField
-            error={errors}
-            register={register}
-            options={siteOptions}
-            label="Select Site"
-            name="site"
-          />
+          <div className="col-span-full">
+            <SelectField
+              error={errors}
+              register={register}
+              options={siteOptions}
+              label="Select Site"
+              name="site"
+            />
+          </div>
         </div>
 
         {error && (
@@ -85,6 +102,7 @@ function ChangeDutyTime({ user, sites }) {
         <table className="table table-pin-rows w-full">
           <thead className="[&_th]:bg-gray-300">
             <tr>
+              <th>Date</th>
               <th>Start Time</th>
               <th>End Time</th>
               <th>Instruction</th>
@@ -101,7 +119,8 @@ function ChangeDutyTime({ user, sites }) {
               </tr>
             ) : (
               duties.map((duty) => (
-                <tr key={duty._id || duty.id}>
+                <tr key={duty._id}>
+                  <td>{duty.date ? new Date(duty.date).toISOString().split("T")[0] : "Default"}</td>
                   <td>
                     {dateFormat(duty?.startTime)?.fullDateAndTime ||
                       duty?.startTime || "N/A"}

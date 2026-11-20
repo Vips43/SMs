@@ -12,6 +12,8 @@ import EmployeeList from "@/components/employee/EmployeeList";
 
 function Employees() {
   const [toggle, setToggle] = useState({ search: false, sites: false });
+  const [editingUserObj, setEditingUserObj] = useState(null);
+
   useEffect(() => {
     document.title = "SMs | Employees";
   }, []);
@@ -32,7 +34,7 @@ function Employees() {
   const { mutateAsync: addUser, isFetching: addingUser, error } = useAddUser();
   const { register, formState: { errors }, handleSubmit, } = useForm();
 
-
+console.log(response)
   const search = (data) => {
     setEmpData((prev) => ({ ...prev, ...data, page: 1 }));
   };
@@ -118,7 +120,9 @@ function Employees() {
       </div>
 
       {/* Added min-h-[350px] or padding-bottom to give room for dropdowns */}
-      <EmployeeList response={response} responding={responding} />
+      <EmployeeList response={response} responding={responding}
+        editingUserObj={editingUserObj}
+        setEditingUserObj={setEditingUserObj} />
     </div>
   );
 }

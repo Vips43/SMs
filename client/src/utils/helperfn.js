@@ -26,6 +26,18 @@ const dateFormat = (date) => {
   };
 };
 
+export const formatTime12h = (timeStr) => {
+  if (!timeStr || typeof timeStr !== "string") return "N/A";
+  const [hoursStr, minutesStr] = timeStr.split(":");
+  const hours = Number(hoursStr);
+  const minutes = Number(minutesStr);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return timeStr;
+
+  const period = hours >= 12 ? "PM" : "AM";
+  const twelveHour = hours % 12 === 0 ? 12 : hours % 12;
+  return `${String(twelveHour).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${period}`;
+};
+
 const convertIsoDate = (val) => new Date(val).toISOString().split("T")[0];
 
 const dateCompare = (a, b) => {

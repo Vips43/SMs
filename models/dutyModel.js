@@ -1,17 +1,32 @@
 import mongoose from "mongoose";
 
+const timeStringRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+const timeField = {
+  type: String,
+  required: true,
+  trim: true,
+  match: [timeStringRegex, "Time must be in HH:mm format (e.g., 10:00)"],
+};
+
 const dutySchema = new mongoose.Schema(
   {
-    instruction: { type: String, required: true },
-    startTime: { type: Date, required: true },
-    endTime: { type: Date, required: true },
-    status: {
-      type: String,
-      enum: ["Pending", "Completed", "Missed"],
-      default: "Pending",
+    date: { type: Date, default: null },
+    startTime: timeField,
+    endTime: timeField,
+    instruction: { type: String, default: "", trim: true },
+    site: { type: mongoose.Schema.Types.ObjectId, ref: "Site", default: null },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
     },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    site: { type: mongoose.Schema.Types.ObjectId, ref: "Site" },
+    changedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   {
     timestamps: true,
@@ -19,6 +34,9 @@ const dutySchema = new mongoose.Schema(
     toObject: { virtuals: true, id: false },
   },
 );
+
+dutySchema.index({ user: 1, createdAt: -1 });
+
 const Duty = mongoose.model("Duty", dutySchema);
 
 export default Duty;

@@ -3,7 +3,7 @@ import { AttedenceHistory } from "../employee/ShowUserAttendence";
 
 function DashboardTable({ presents, absents, halfday, checkouts, label }) {
   const alldata = presents || absents || halfday || checkouts || [];
-
+  console.log(alldata)
   return (
     <div className="max-h-full h-full overflow-auto">
       <table className="table table-pin-rows table-pin-cols w-full min-w-2xl">
@@ -24,7 +24,7 @@ function DashboardTable({ presents, absents, halfday, checkouts, label }) {
               const recordStatus = d?.status || d?.attendenceRecords?.[0]?.status || "Absent";
               const checkIn = d?.checkInTime;
               const checkOut = d?.checkOutTime;
-              const duty = d?.duty.find(d => dateCompare(d.createdAt, new Date()))?.startTime;
+              const duty = `${d?.duty?.startTime} - ${d?.duty?.endTime}`;
 
               return (
                 <tr key={d._id || idx} className="hover">
@@ -50,7 +50,7 @@ function DashboardTable({ presents, absents, halfday, checkouts, label }) {
                       {recordStatus}
                     </span>
                   </td>
-                  <td>{dateFormat(duty)?.time || "N/A"}</td>
+                  <td>{duty || "N/A"}</td>
                   <td>{checkIn ? dateFormat(checkIn)?.time : "N/A"}</td>
                   <td>{checkOut ? dateFormat(checkOut)?.time : "N/A"}</td>
                 </tr>

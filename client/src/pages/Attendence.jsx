@@ -1,12 +1,20 @@
-import AttendanceCalendar from "@/components/attendence/AttendenceCalendar";
 import ShowUserAttendence from "@/components/employee/ShowUserAttendence";
 import { useGetAttendenceQuery, useMarkAttandence } from "@/hooks/empHooks";
 import { useGetMe } from "@/hooks/authHooks";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
-import { dateCompare, dateFormat, greaterThanToday } from "@/utils/helperfn";
+import { dateCompare, dateFormat, formatTime12h } from "@/utils/helperfn";
+
+
+const ACTION_MAP = {
+  in: "CHECK_IN",
+  out: "CHECK_OUT",
+  mid_day: "MID_DAY",
+  mid_eve: "MID_EVE",
+};
+
 
 export default function Attendence() {
   const [toggle, setToggle] = useState(false);
@@ -21,9 +29,10 @@ export default function Attendence() {
   const isPrivilegedUser = ["admin", "operator"].includes(user?.role);
 
   const handleMark = async (action) => {
+    const mappedAction = ACTION_MAP[action] || action;
     try {
       const res = await marking({
-        action: action === "in" ? "CHECK_IN" : "CHECK_OUT",
+        action: mappedAction,
       });
       toast.success(res?.msg || "Attendance marked successfully");
     } catch (error) {
@@ -36,8 +45,9 @@ export default function Attendence() {
 
   if (loadingAttdnc) {
     return (
-      <div className="grid place-items-center h-full">
-        <span className="loading loading-bars loading-xl"></span>
+      <div className="flex flex-col justify-center items-center gap-10 h-full">
+        <span className="bg-gray-400 rounded-full w-64 h-64"></span>
+        <span className="w-84 h-32 bg-gray-400 rounded-lg"></span>
       </div>
     );
   }
@@ -93,17 +103,27 @@ export default function Attendence() {
   );
 }
 
-function ShowEmpAttendence({ handleMark, isMarking, user, loadingAttdnc, history }) {
-  const duty = history?.dutyRecords?.filter((d) =>
-    greaterThanToday(d?.startTime, new Date())
-  );
 
+
+function ShowEmpAttendence({ handleMark, isMarking, history }) {
+  const duty = history?.duty || {};
   const records = history?.attendenceRecords || [];
   const todays = records.find((a) => dateCompare(a?.createdAt, new Date()));
 
   const isCheckedIn = Boolean(todays?.checkInTime);
   const isCheckedOut = Boolean(todays?.checkOutTime || todays?.totalWorkingHours);
-  const isAdmin = user?.role === "admin";
+  const isActiveShift = isCheckedIn && !isCheckedOut;
+
+  const midDayMarked = Boolean(todays?.midDayTime);
+  const midEveMarked = Boolean(todays?.midEveningTime);
+
+  const midDayTimeLabel = todays?.midDayTime
+    ? dateFormat(todays.midDayTime)?.time
+    : null;
+
+  const midEveTimeLabel = todays?.midEveningTime
+    ? dateFormat(todays.midEveningTime)?.time
+    : null;
 
   const checkInTimeFormatted = todays?.checkInTime
     ? dateFormat(todays.checkInTime)?.time
@@ -121,28 +141,7 @@ function ShowEmpAttendence({ handleMark, isMarking, user, loadingAttdnc, history
 
   return (
     <div className="min-h-full flex flex-col gap-6 pb-6 pt-4 items-center justify-center">
-      {/* Time Stats Display */}
-      <div className="flex gap-10 text-center bg-base-300 px-6 py-3 rounded-xl border border-gray-300 hidden">
-        <div>
-          <span className="text-xs uppercase tracking-wider text-base-content font-medium block">
-            Check-In Time Today
-          </span>
-          <span className="text-lg font-semibold text-base-content">
-            {checkInTimeFormatted}
-          </span>
-        </div>
-        <div className="divider divider-horizontal mx-0"></div>
-        <div>
-          <span className="text-xs uppercase tracking-wider text-base-content font-medium block">
-            Check-Out Time Today
-          </span>
-          <span className="text-lg font-semibold text-base-content">
-            {checkOutTimeFormatted}
-          </span>
-        </div>
-      </div>
 
-      {/* Main Interactive Action Container */}
       <div className="flex flex-col items-center justify-center gap-6 py-2">
         {!isCheckedIn && (
           <button
@@ -162,7 +161,7 @@ function ShowEmpAttendence({ handleMark, isMarking, user, loadingAttdnc, history
           </button>
         )}
 
-        {isCheckedIn && !isCheckedOut && (
+        {isActiveShift && (
           <button
             type="button"
             onClick={confirmMarkOut}
@@ -175,14 +174,13 @@ function ShowEmpAttendence({ handleMark, isMarking, user, loadingAttdnc, history
               <>
                 <span>Mark Out</span>
                 <span className="text-4xl">✕</span>
-                {/* <span className="text-2xl">{checkInTimeFormatted}</span> */}
               </>
             )}
           </button>
         )}
 
         {isCheckedOut && (
-          <div className="flex flex-col items-center gap-4 bg-base-200/60 p-6 rounded-2xl border border-base-300 shadow-sm text-center">
+          <div className="flex flex-col items-center gap-3 bg-base-200/60 p-6 rounded-2xl border border-base-300 shadow-sm text-center">
             <div className="badge badge-success badge-lg font-semibold px-4 py-3 text-white">
               Shift Completed for Today ✓
             </div>
@@ -198,36 +196,85 @@ function ShowEmpAttendence({ handleMark, isMarking, user, loadingAttdnc, history
         )}
       </div>
 
-      {duty?.length > 0 && (
-        <div className="w-full max-w-md grid grid-cols-2 border border-gray-400 rounded-xl overflow-hidden text-sm">
-          <div className="col-span-2 grid grid-cols-2 bg-gray-400 p-2 text-center font-semibold border border-gray-300">
-            <span>In Time</span>
-            <span>Out Time</span>
+      {isActiveShift && (
+        <div className="w-full max-w-md bg-base-200/70 border border-base-300 rounded-2xl p-4 space-y-3 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-base-content/70">
+              Scheduled Check-Ins
+            </span>
+            <span className="text-xs text-base-content/60">12:00 PM &amp; 3:00 PM</span>
           </div>
-          {duty?.map((d, index) => (
-            <React.Fragment key={d.id || index}>
-              <span className="border-r border-base-300 p-2 text-center">
-                {d?.startTime ? dateFormat(d.startTime).fullDateAndTime : "N/A"}
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              disabled={isMarking || midDayMarked}
+              onClick={() => handleMark("mid_day")}
+              className={`btn btn-sm h-auto py-2.5 flex-col gap-0.5 ${midDayMarked ? "btn-success btn-soft" : "btn-outline btn-info"
+                }`}
+            >
+              <span className="font-semibold">12:00 PM Check-In</span>
+              <span className="text-[11px] opacity-80">
+                {midDayMarked ? `Done · ${midDayTimeLabel}` : "Mid-Day Presence"}
               </span>
-              <span className="p-2 text-center">
-                {d?.endTime ? dateFormat(d.endTime).fullDateAndTime : "Active"}
+            </button>
+
+            <button
+              type="button"
+              disabled={isMarking || midEveMarked}
+              onClick={() => handleMark("mid_eve")}
+              className={`btn btn-sm h-auto py-2.5 flex-col gap-0.5 ${midEveMarked ? "btn-success btn-soft" : "btn-outline btn-secondary"
+                }`}
+            >
+              <span className="font-semibold">3:00 PM Check-In</span>
+              <span className="text-[11px] opacity-80">
+                {midEveMarked ? `Done · ${midEveTimeLabel}` : "3 PM Presence"}
               </span>
-            </React.Fragment>
-          ))}
+            </button>
+          </div>
         </div>
       )}
 
-      {isAdmin && (
-        <div className="w-full max-w-2xl mt-4 hidden">
-          {loadingAttdnc ? (
-            <div className="flex justify-center items-center py-4">
-              <span className="loading loading-spinner text-accent loading-md"></span>
+      {(duty?.startTime || duty?.endTime) && (
+        <div className="w-full max-w-md bg-gray-300 border border-base-300 rounded-2xl px-4 py-3 shadow-xs">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-base-content/70">
+              Duty Time
+            </span>
+            <span className="badge badge-info badge-outline badge-sm">
+              {duty?.date
+                ? dateFormat(duty.date)?.date || "Scheduled"
+                : "Default Shift"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 divide-x divide-base-300 text-center bg-base-100 rounded-xl py-2.5 border border-base-300/60">
+            <div className="px-2">
+              <span className="text-[11px] uppercase tracking-wide text-base-content/60 block">
+                Duty In
+              </span>
+              <span className="text-base font-bold text-base-content">
+                {formatTime12h(duty?.startTime)}
+              </span>
             </div>
-          ) : (
-            <AttendanceCalendar records={records} />
+            <div className="px-2">
+              <span className="text-[11px] uppercase tracking-wide text-base-content/60 block">
+                Duty Out
+              </span>
+              <span className="text-base font-bold text-base-content">
+                {formatTime12h(duty?.endTime)}
+              </span>
+            </div>
+          </div>
+
+          {duty?.instruction && (
+            <p className="text-xs text-base-content/80 mt-2.5 px-1">
+              <span className="font-semibold">Instruction:</span> {duty.instruction}
+            </p>
           )}
         </div>
       )}
     </div>
   );
 }
+

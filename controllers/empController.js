@@ -82,7 +82,7 @@ const markCheckout = async (req, res, next) => {
 
 const addDuty = async (req, res, next) => {
   try {
-    const data = await dutyServices.createDuty(req?.body);
+    const data = await dutyServices.createDuty(req?.body, req?.user);
     return res.status(200).json(data);
   } catch (error) {
     console.error(error);

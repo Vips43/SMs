@@ -14,6 +14,41 @@ export const startEndDate = (start) => {
   return { startOfDay, endOfDay };
 };
 
+const CHECKPOINT_WINDOWS = {
+  MID_DAY: {
+    field: "midDayTime",
+    label: "12:00 PM Check-In",
+    startHour: 11,
+    startMin: 45,
+    endHour: 12,
+    endMin: 30,
+  },
+  MID_EVE: {
+    field: "midEveningTime",
+    label: "3:00 PM Check-In",
+    startHour: 14,
+    startMin: 45,
+    endHour: 15,
+    endMin: 30,
+  },
+};
+
+function isWithinWindow(dateObj, config) {
+  const currentMinutes = dateObj.getHours() * 60 + dateObj.getMinutes();
+  const startMinutes = config.startHour * 60 + config.startMin;
+  const endMinutes = config.endHour * 60 + config.endMin;
+  return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+}
+
+function formatWindowRange(config) {
+  const fmt = (h, m) => {
+    const period = h >= 12 ? "PM" : "AM";
+    const twelve = h % 12 === 0 ? 12 : h % 12;
+    return `${String(twelve).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
+  };
+  return `${fmt(config.startHour, config.startMin)} - ${fmt(config.endHour, config.endMin)}`;
+}
+
 export const calcTotalHours = (inTime) => {
   const now = new Date();
   const diffMs = now - new Date(inTime);
@@ -61,56 +96,38 @@ const empServices = {
 
   markAttendance: async function ({ body, user }) {
     const now = new Date();
-    const action = body.action;
+    const { action, coords } = body;
 
     const existAtt = await this.existAttendence(user.id);
-    await this.getcoords(user);
 
-    const { endOfDay, startOfDay } = startEndDate(now);
-
-    const assignedDuty = await Duty.findOne({
-      user: user.id,
-      startTime: { $gte: startOfDay, $lte: endOfDay },
-    });
-
-    if (action === "CHECK_OUT") {
-      if (!existAtt)
-        throw createError("No attendance record found for today", 404);
-      if (!existAtt.checkInTime)
-        throw createError("Invalid Attendance Action", 400);
-      if (existAtt.checkOutTime) throw createError("Already Marked Out", 400);
-
-      const totalHours = calcTotalHours(existAtt?.checkInTime);
-      existAtt.checkOutTime = now;
-      existAtt.totalWorkingHours = totalHours;
-
-      existAtt.history.push({
-        action,
-        status: existAtt.status,
-        date: now,
-        changedBy: user.id,
-        reason: "User CheckOut",
+    if (Array.isArray(coords) && coords.length === 2) {
+      await User.findByIdAndUpdate(user.id, {
+        $set: { "location.coordinates": coords },
       });
-
-      await existAtt.save();
-      return { msg: "Marked Out" };
     }
+
+    await this.getcoords(user);
 
     if (action === "CHECK_IN") {
       if (existAtt)
-        throw createError("Already attendance marked for Today", 400);
+        throw createError("Attendance already marked for today", 400);
+
+      const { endOfDay, startOfDay } = startEndDate(now);
+      const assignedDuty = await Duty.findOne({
+        user: user.id,
+        startTime: { $gte: startOfDay, $lte: endOfDay },
+      });
 
       let checkInReason = "User CheckIn";
 
-      // Check if duty exists and handle the 15-minute grace period
-      if (assignedDuty && assignedDuty.startTime) {
-        const startTimeMs = new Date(assignedDuty.startTime).getTime();
-        const nowMs = now.getTime();
-        const gracePeriodMs = 15 * 60 * 1000; // 15 minutes in milliseconds
+      if (assignedDuty?.startTime) {
+        const startTimeMs = new Date(assignedDuty?.startTime).getTime();
+        const gracePeriodMs = 15 * 60 * 1000;
 
-        // If check-in is later than startTime + 15 mins
-        if (nowMs > startTimeMs + gracePeriodMs) {
-          const minutesLate = Math.floor((nowMs - startTimeMs) / (60 * 1000));
+        if (now.getTime() > startTimeMs + gracePeriodMs) {
+          const minutesLate = Math.floor(
+            (now.getTime() - startTimeMs) / (60 * 1000),
+          );
           checkInReason = `Late CheckIn (${minutesLate} mins late)`;
         }
       }
@@ -122,21 +139,105 @@ const empServices = {
         history: [
           {
             status: "Present",
-            action,
+            action: "CHECK_IN",
             date: now,
             changedBy: user.id,
-            reason: checkInReason, // Will dynamically log if they are late
+            reason: checkInReason,
           },
         ],
       });
 
-      return { msg: `marked ${att.status}` };
+      return { msg: `Marked ${att.status}`, attendance: att };
+    }
+
+    // Require active check-in for all subsequent actions
+    if (!existAtt || !existAtt.checkInTime) {
+      throw createError("No active check-in found for today", 404);
+    }
+    if (existAtt.checkOutTime) {
+      throw createError("Already checked out for today", 400);
+    }
+
+    // 2. MID_DAY (12:00 PM) & MID_EVE (3:00 PM)
+    if (action === "MID_DAY" || action === "MID_EVE") {
+      const config = CHECKPOINT_WINDOWS[action];
+
+      if (!isWithinWindow(now, config)) {
+        throw createError(
+          `${config.label} verification is only allowed between ${config.startHour}:${String(config.startMin).padStart(2, "0")} and ${config.endHour}:${String(config.endMin).padStart(2, "0")}`,
+          400,
+        );
+      }
+
+      if (existAtt[config.field]) {
+        throw createError(`${config.label} already verified`, 400);
+      }
+
+      existAtt[config.field] = now;
+      existAtt.history.push({
+        action,
+        status: existAtt.status,
+        date: now,
+        changedBy: user.id,
+        reason: `${config.label} location verified`,
+      });
+
+      await existAtt.save();
+      return { msg: `${config.label} verified`, attendance: existAtt };
+    }
+
+    if (action === "CHECK_OUT") {
+      const totalHours = calcTotalHours(existAtt.checkInTime, now);
+
+      existAtt.checkOutTime = now;
+      existAtt.totalWorkingHours = totalHours > 0 ? totalHours : 0;
+      existAtt.isAutoCheckout = false;
+
+      existAtt.history.push({
+        action: "CHECK_OUT",
+        status: existAtt.status,
+        date: now,
+        changedBy: user.id,
+        reason: "User CheckOut",
+      });
+
+      await existAtt.save();
+      return { msg: "Marked Out", attendance: existAtt };
+    }
+
+    if (action === "MID_DAY" || action === "MID_EVE") {
+      const config = CHECKPOINT_WINDOWS[action];
+
+      if (!isWithinWindow(now, config)) {
+        throw createError(
+          `${config.label} is only allowed between ${formatWindowRange(config)}`,
+          400,
+        );
+      }
+
+      if (existAtt[config.field]) {
+        throw createError(`${config.label} already marked for today`, 400);
+      }
+
+      existAtt[config.field] = now;
+      existAtt.history.push({
+        action, // "MID_DAY" or "MID_EVE"
+        status: existAtt.status,
+        date: now,
+        changedBy: user.id,
+        reason: `${config.label} verified`,
+      });
+
+      await existAtt.save();
+      return {
+        msg: `${config.label} marked successfully`,
+        attendance: existAtt,
+      };
     }
 
     throw createError("Invalid action type", 400);
   },
 
-  // Admin / Operator attendance assignment
   attendenceAssign: async function ({ body, user }) {
     const { id, status = "Present", reason = "Administrative update" } = body;
     const privilegedRoles = ["operator", "admin"];
@@ -236,7 +337,7 @@ const empServices = {
     const singleUser = await User.findById(currentUser.id)
       .populate(populateOptions)
       .select(
-        "firstname middlename lastname attendence attendenceRecords updatedAt",
+        "firstname middlename lastname attendence attendenceRecords updatedAt duty",
       );
 
     if (!singleUser) {
@@ -371,58 +472,85 @@ const empServices = {
 export default empServices;
 
 export const dutyServices = {
-  createDuty: async (data) => {
-    const { startOfDay: start, endOfDay: startE } = startEndDate(
-      data.startTime,
-    );
-    const { startOfDay: endS, endOfDay: end } = startEndDate(data.endTime);
+  createDuty: async (data, reqUser) => {
+    const userId = data.id || data.userId;
+    const changedById = reqUser?._id || reqUser?.id;
 
-    const user = await User.findById(data.id).populate({
-      path: "dutyRecords",
-      match: {
-        startTime: { $gte: start, $lte: startE },
-        endTime: { $gte: endS, $lte: end },
-      },
-    });
+    const user = await User.findById(userId);
+    if (!user) throw createError("User not found", 404);
 
-    if (user && user.dutyRecords && user.dutyRecords.length > 0) {
-      throw createError("Duty already exists on same day", 409);
-    }
+    const normalizedDate = data.date ? new Date(data.date) : null;
+    const resolvedSite = data.site || null;
+    const instruction = (data.instruction || "Be on Time").trim();
+
+    // 1. Create a new Duty log record for this change
     const newDuty = await Duty.create({
-      instruction: data.instruction,
+      date: normalizedDate,
       startTime: data.startTime,
       endTime: data.endTime,
-      site: data.site,
-      user: data.id,
+      instruction,
+      site: resolvedSite,
+      user: user._id,
+      changedBy: changedById,
     });
-
-    user.dutyTime = { startTime: newDuty.startTime, endTime: newDuty.endTime };
-    await user.save();
 
     if (!newDuty) throw createError("Duty not created", 400);
 
-    if (user.fcmTokens && user.fcmTokens.length > 0) {
+    // 2. Update default/current duty on User
+    user.duty = {
+      date: normalizedDate,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      site: resolvedSite,
+      instruction,
+      updatedAt: new Date(),
+    };
+    if (resolvedSite) {
+      user.site = resolvedSite;
+    }
+    await user.save();
+
+    // 3. Notify employee via FCM
+    if (Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
       try {
         const response = await getMessaging().sendEachForMulticast({
           tokens: user.fcmTokens,
           notification: {
             title: "Hello! Your Duty time has changed",
-            body: data?.instruction || "Your shift has been updated.",
+            body:
+              instruction ||
+              `Your duty shift is now ${data.startTime} - ${data.endTime}.`,
+          },
+          data: {
+            dutyId: String(newDuty._id),
+            date: String(data?.date || ""),
+            startTime: String(data.startTime),
+            endTime: String(data.endTime),
           },
         });
 
-        console.log("FCM Success count:", response.successCount);
-        console.log("FCM Failure count:", response.failureCount);
-
         if (response.failureCount > 0) {
+          const invalidTokens = [];
           response.responses.forEach((resp, idx) => {
             if (!resp.success) {
-              console.error(
-                `Token error [${user.fcmTokens[idx]}]:`,
-                resp.error.message,
-              );
+              const token = user.fcmTokens[idx];
+              console.error(`Token error [${token}]:`, resp.error?.message);
+              if (
+                resp.error?.code ===
+                  "messaging/registration-token-not-registered" ||
+                resp.error?.code === "messaging/invalid-registration-token"
+              ) {
+                invalidTokens.push(token);
+              }
             }
           });
+
+          if (invalidTokens.length > 0) {
+            await User.updateOne(
+              { _id: user._id },
+              { $pull: { fcmTokens: { $in: invalidTokens } } },
+            );
+          }
         }
       } catch (err) {
         console.error("FCM Multicast error:", err);
@@ -432,6 +560,7 @@ export const dutyServices = {
     return {
       msg: "Duty has been created and assigned successfully",
       success: true,
+      duty: newDuty,
     };
   },
 

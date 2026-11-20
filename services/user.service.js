@@ -26,15 +26,9 @@ const userService = {
     if (!validateUser) throw createError("credentials not matched", 401);
 
     const accessToken = await createToken(extUser);
-    // const refreshToken = await createRefreshToken(extUser);
 
-    // await User.updateOne(
-    //   { _id: extUser._id },
-    //   { $push: { refreshTokens: { $each: [refreshToken], $slice: -5 } } },
-    // );
     return {
       token: accessToken,
-      // refreshToken,
       user: {
         id: extUser._id,
         name: extUser.name,
@@ -309,10 +303,9 @@ export const dashboardService = {
     );
 
     const employees = await User.find({})
-      .select("firstname middlename lastname role")
+      .select("firstname middlename lastname role duty")
       .lean()
       .populate([
-        { path: "dutyRecords" },
         {
           path: "attendenceRecords",
           match: {
@@ -338,7 +331,7 @@ export const dashboardService = {
         middlename: emp?.middlename,
         lastname: emp?.lastname,
         role: emp?.role,
-        duty: emp.dutyRecords,
+        duty: emp?.duty,
         ...(todayRecord || {}),
       };
 

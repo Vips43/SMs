@@ -1,8 +1,7 @@
-import { useChangePassword, useEditUser, useMarkActiveMutation, } from "@/hooks/empHooks";
-import { useState } from "react";
+import { useChangePassword, useEditUser, useMarkActiveMutation } from "@/hooks/empHooks";
+import { useEffect, useRef, useState } from "react";
 import InputField from "../form/InputField";
 import AddEmp from "./AddEmp";
-import ModalButton from "../oth/ModalButton";
 import EmpCard, { EmpDetails } from "./EmpCard";
 import { AlarmClock, Eye, IndianRupee, LockKeyholeOpenIcon, Notebook, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
@@ -11,11 +10,12 @@ import { dateFormat } from "@/utils/helperfn";
 import ChangeDutyTime from "./ChangeDutyTime";
 import { useGetSiteQuery } from "@/hooks/siteHooks";
 
-function EmployeeList({ response, responding }) {
-  const [selecteduser, setSelecteduser] = useState({});
+function EmployeeList({ response, responding, editingUserObj, setEditingUserObj }) {
+  // type: "view" | "duty" | "password" | "advance" | null;
+  
+  const [modalState, setModalState] = useState({ type: null, user: null });
   const [toggle, setToggle] = useState(false);
-
-  const [editingUserObj, setEditingUserObj] = useState(null);
+  const dialogRef = useRef(null);
 
   const { mutateAsync: editUser, isFetching: editingUser } = useEditUser();
   const { mutateAsync: markActive } = useMarkActiveMutation();
@@ -23,11 +23,30 @@ function EmployeeList({ response, responding }) {
 
   const { data: users } = response || {};
 
+  useEffect(() => {
+    if (modalState.type && dialogRef.current && !dialogRef.current.open) {
+      dialogRef.current.showModal();
+    }
+  }, [modalState.type, modalState.user]);
+
+  const openModal = (type, user) => {
+    if (type === "view") setToggle(false);
+    setModalState({ type, user });
+  };
+
+  const closeModal = () => {
+    if (dialogRef.current?.open) {
+      dialogRef.current.close();
+    }
+    setModalState({ type: null, user: null });
+  };
+
+  const activeUser = modalState.user;
+
   return (
     <div className="flex-1 min-h-0 m-1 flex flex-col overflow-hidden shadow-lg">
-      {/* Scrollable container for tbody */}
       <div className="flex-1 min-h-0 overflow-auto w-full">
-        <table className="table table-pin-rows  w-full min-w-max">
+        <table className="table table-pin-rows w-full min-w-max">
           <thead>
             <tr className="bg-gray-200">
               <th>#</th>
@@ -66,87 +85,94 @@ function EmployeeList({ response, responding }) {
               users?.map((user, i) => (
                 <tr
                   key={user?._id}
-                  className={`relative ${user.active ? "" : "opacity-40"}`}>
+                  className={`relative ${user.active ? "" : "opacity-40"}`}
+                >
                   <td>{i + 1}</td>
                   <td>
                     {user.firstname} {user.middlename} {user.lastname}
                   </td>
                   <td>{user?.email}</td>
                   <td>{user?.site?.name}</td>
-                  <td><p className="badge badge-sm badge-accent capitalize">{user?.role}</p></td>
+                  <td>
+                    <p className="badge badge-sm badge-accent capitalize">
+                      {user?.role}
+                    </p>
+                  </td>
                   <td
                     className="flex items-center justify-center gap-3 overflow-visible"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}>
-                    <div className="tooltip" data-tip='Edit'>
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Edit */}
+                    <div className="tooltip" data-tip="Edit">
                       <button
                         type="button"
                         className="btn btn-outline btn-sm btn-info"
                         onClick={() => {
                           setEditingUserObj(user);
-                          document.getElementById("modal_shared_edit_emp")?.showModal();
-                        }}>
+                          document
+                            .getElementById("modal_shared_edit_emp")
+                            ?.showModal();
+                        }}
+                      >
                         <Pencil className="h-4 w-4" />
                       </button>
                     </div>
-                    {/* show emp  */}
-                    <div className="tooltip" data-tip='View'>
-                      <ModalButton
-                        id={`view-emp-modal-${user._id}`}
-                        btn="btn-secondary btn-sm"
-                        title={<Eye className="h-5" />}
-                        onClick={() => {
-                          setSelecteduser(user);
-                          setToggle(false);
-                        }}>
-                        {selecteduser?._id === user?._id && !toggle ? (
-                          <EmpCard user={selecteduser} setToggle={setToggle} />
-                        ) : (
-                          <EmpDetails user={selecteduser} setToggle={setToggle} />
-                        )}
-                      </ModalButton>
-                    </div>
-                    {/* change Duty  */}
-                    <div className="tooltip" data-tip='change Duty time'>
-                      <ModalButton
-                        id={`cd-emp-modal-${user._id}`}
-                        title={<AlarmClock className="h-4.5" />}
-                        btn="btn-info btn-sm"
-                        onClick={() => setSelecteduser(user)}>
-                        {selecteduser?._id === user?._id && (
-                          <ChangeDutyTime user={selecteduser} sites={sites} />
-                        )}
-                      </ModalButton>
-                    </div>
-                    {/* change password  */}
-                    <div className="tooltip" data-tip='change password'>
-                      <ModalButton
-                        id={`cp-emp-modal-${user._id}`}
-                        title={<LockKeyholeOpenIcon className="h-4" />}
-                        btn="btn-accent btn-sm"
-                        onClick={() => setSelecteduser(user)}>
-                        {selecteduser?._id === user?._id && (
-                          <ChangePassword user={selecteduser} />
-                        )}
-                      </ModalButton>
-                    </div>
-                    <div className="tooltip" data-tip='Add Advance'>
-                      <ModalButton id={`advance-emp-modal-${user._id}`} btn="btn-success btn-sm" title={<IndianRupee className="h-4" />} onClick={() => setSelecteduser(user)}>
-                        {selecteduser?._id === user?._id &&
-                          <AdvanceForm emp={selecteduser} editUser={editUser} />
-                        }
-                      </ModalButton>
+
+                    {/* View */}
+                    <div className="tooltip" data-tip="View">
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => openModal("view", user)}
+                      >
+                        <Eye className="h-5" />
+                      </button>
                     </div>
 
-                    <div className="tooltip tooltip-left" data-tip='Mark Active/Inactive'>
+                    {/* Change Duty Time */}
+                    <div className="tooltip" data-tip="change Duty time">
+                      <button
+                        type="button"
+                        className="btn btn-info btn-sm"
+                        onClick={() => openModal("duty", user)}
+                      >
+                        <AlarmClock className="h-4.5" />
+                      </button>
+                    </div>
+
+                    {/* Change Password */}
+                    <div className="tooltip" data-tip="change password">
+                      <button
+                        type="button"
+                        className="btn btn-accent btn-sm"
+                        onClick={() => openModal("password", user)}
+                      >
+                        <LockKeyholeOpenIcon className="h-4" />
+                      </button>
+                    </div>
+
+                    {/* Add Advance */}
+                    <div className="tooltip" data-tip="Add Advance">
+                      <button
+                        type="button"
+                        className="btn btn-success btn-sm"
+                        onClick={() => openModal("advance", user)}
+                      >
+                        <IndianRupee className="h-4" />
+                      </button>
+                    </div>
+
+                    {/* Active Toggle */}
+                    <div className="tooltip tooltip-left" data-tip="Mark Active/Inactive">
                       <input
                         type="checkbox"
                         checked={!!user?.active}
                         className="toggle toggle-success"
                         onChange={async () => {
-                          const confirm = window.confirm(`Are you sure want to mark user as ${!user.active ? "Active" : "InActive"}`);
-                          if (confirm) {
+                          const confirmed = window.confirm(
+                            `Are you sure want to mark user as ${!user.active ? "Active" : "InActive"}`
+                          );
+                          if (confirmed) {
                             try {
                               const res = await markActive({
                                 id: user._id,
@@ -167,10 +193,57 @@ function EmployeeList({ response, responding }) {
           </tbody>
         </table>
       </div>
+
+      {/* Rendered ONLY when a row modal action is clicked */}
+      {modalState.type && activeUser && (
+        <dialog
+          ref={dialogRef}
+          onClose={closeModal}
+          className="modal"
+        >
+          <div className="modal-box max-w-2xl relative bg-base-100">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="btn btn-sm btn-circle btn-ghost absolute right-3 top-3"
+            >
+              ✕
+            </button>
+
+            {modalState.type === "view" &&
+              (!toggle ? (
+                <EmpCard user={activeUser} setToggle={setToggle} />
+              ) : (
+                <EmpDetails user={activeUser} setToggle={setToggle} />
+              ))}
+
+            {modalState.type === "duty" && (
+              <ChangeDutyTime
+                user={activeUser}
+                sites={sites}
+                onSuccess={closeModal}
+              />
+            )}
+
+            {modalState.type === "password" && (
+              <ChangePassword user={activeUser} />
+            )}
+
+            {modalState.type === "advance" && (
+              <AdvanceForm emp={activeUser} editUser={editUser} />
+            )}
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button type="submit" onClick={closeModal}>close</button>
+          </form>
+        </dialog>
+      )}
+
       {editingUserObj && (
         <AddEmp
           type="edit"
           user={editingUserObj}
+          setEditingUserObj={setEditingUserObj}
           onSubmitEmp={editUser}
           loading={editingUser}
           modalId="modal_shared_edit_emp"
@@ -251,57 +324,60 @@ function ChangePassword({ user }) {
 }
 
 function AdvanceForm({ emp, editUser }) {
-  const { register, handleSubmit, } = useForm();
+  const { register, handleSubmit, reset } = useForm();
 
   const submit = async (data) => {
-    data.advance = true
-    const payload = { creds: data, id: emp._id }
-    console.log(payload)
-    const res = await editUser(payload)
-    console.log(res)
+    data.advance = true;
+    const payload = { creds: data, id: emp._id };
+    try {
+      await editUser(payload);
+      toast.success("Advance added successfully");
+      reset();
+    } catch (error) {
+      toast.error(error?.message || "Failed to add advance");
+    }
   };
 
   const fullName = [emp?.firstname, emp?.middlename, emp?.lastname].filter(Boolean).join(" ");
 
   return (
-    <div className="card bg-base-100 min-w-xl w-full p-6 pt-1 shadow-xl border border-base-300">
-      <h3 className="font-bold text-2xl mb-3">Advance Details</h3>
+    <div className="card bg-base-100 w-full max-w-2xl p-6 shadow-xl border border-base-300">
+      <h3 className="font-bold text-2xl mb-1">Advance Details</h3>
       <p className="text-sm text-base-content font-bold mb-4">
         Employee: <span className="font-semibold text-base-content/80">{fullName || "N/A"}</span>
       </p>
 
-
       {/* Form Section */}
-      <form onSubmit={handleSubmit(submit)} className="flex flex-col sm:flex-row gap-3 items-end mb-4">
-        <div className="form-control w-full">
-          <label className="input input-lg pb-1 border border-black ">
-            <IndianRupee className="w-5 h-5" />
-            <input
-              type="number"
-              required
-              placeholder="Amount in Rupees..."
-              className="placeholder:text-gray-600 text-xl w-full"
-              {...register("amount", { required: true })}
-            />
-          </label>
-          <label className="input input-lg pb-1 border border-black ml-2">
-            <Notebook />
-            <input
-              type="text"
-              required
-              placeholder="Note..."
-              className="input"
-              {...register("note", { required: true })}
-            />
-          </label>
-        </div>
-        <button type="submit" className="btn btn-primary w-full sm:w-auto mt-auto">
+      <form onSubmit={handleSubmit(submit)} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mb-6">
+        <label className="input input-bordered flex items-center gap-2 md:col-span-4 h-12 w-full">
+          <IndianRupee className="w-5 h-5 text-gray-500 shrink-0" />
+          <input
+            type="number"
+            required
+            placeholder="Amount..."
+            className="w-full text-base bg-transparent focus:outline-none"
+            {...register("amount", { required: true })}
+          />
+        </label>
+
+        <label className="input input-bordered flex items-center gap-2 md:col-span-5 h-12 w-full">
+          <Notebook className="w-5 h-5 text-gray-500 shrink-0" />
+          <input
+            type="text"
+            required
+            placeholder="Note..."
+            className="w-full text-base bg-transparent focus:outline-none"
+            {...register("note", { required: true })}
+          />
+        </label>
+
+        <button type="submit" className="btn btn-primary md:col-span-3 h-12 w-full">
           Add Advance
         </button>
       </form>
 
       {/* Table Section */}
-      <div className="overflow-x-auto max-h-72 rounded-lg outline mb-6">
+      <div className="overflow-x-auto max-h-72 rounded-lg border border-base-300">
         <table className="table table-pin-rows w-full">
           <thead className="[&_th]:bg-gray-700 text-white">
             <tr>
@@ -327,6 +403,7 @@ function AdvanceForm({ emp, editUser }) {
                       ? `${ad.givenBy.firstname} ${ad.givenBy.lastname || ""}`
                       : "System"}
                   </td>
+                  <td>{ad.note || "N/A"}</td>
                   <td className="font-semibold text-right">{ad.amount} ₹</td>
                 </tr>
               ))
@@ -334,9 +411,6 @@ function AdvanceForm({ emp, editUser }) {
           </tbody>
         </table>
       </div>
-
-
     </div>
   );
 }
-

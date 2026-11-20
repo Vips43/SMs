@@ -1,10 +1,21 @@
-
 import { dateFormat } from '@/utils/helperfn';
 import { differenceInYears } from 'date-fns';
 import { Download } from 'lucide-react';
 
 const defaultPhoto =
   "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRE90TDdHxK9BwLoldB7X6SHDKEUKsMOfsaIsLb2ghnqg&s";
+
+// Mock or pass down download handler if not globally defined
+const downloadDocument = (url, filename) => {
+  if (!url) return;
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.target = '_blank';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
 const getUserTypeBadge = (type) => {
   switch (type?.toLowerCase()) {
@@ -18,12 +29,12 @@ const getUserTypeBadge = (type) => {
 };
 
 // Reusable read-only field
-const Field = ({ label, value }) => (
-  <div className="space-y-1">
+const Field = ({ label, value, classes }) => (
+  <div className={`space-y-1 ${classes}`}>
     <label className="text-sm font-medium text-gray-600">
       {label}
     </label>
-    <div className="min-h-10 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-900 break-words">
+    <div className="min-h-10 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-900 wrap-break-word">
       {value || "N/A"}
     </div>
   </div>
@@ -56,6 +67,16 @@ const DocumentLink = ({ url, title = "View Document" }) => (
     </span>
   )
 );
+
+const Show = ({ label, value, classes }) => (
+  <section className={classes}>
+    <p className='font-bold'>{label}</p>
+    <p className='text-sm pl-'>
+      <span className='inline-block rotate-180'>↵</span> {value}
+    </p>
+  </section>
+);
+
 
 export function EmpDetails({ user = {}, setToggle }) {
   const familyList = user?.familyDetails?.filter(
@@ -90,7 +111,6 @@ export function EmpDetails({ user = {}, setToggle }) {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 mb-6 border-b border-gray-200">
-
         <div>
           <h2 className="text-xl font-semibold text-gray-800">
             Employee Details
@@ -101,8 +121,8 @@ export function EmpDetails({ user = {}, setToggle }) {
         </div>
 
         <span className={`px-3 py-1 rounded text-sm font-medium ${user?.active
-            ? "bg-green-100 text-green-700"
-            : "bg-red-100 text-red-700"
+          ? "bg-green-100 text-green-700"
+          : "bg-red-100 text-red-700"
           }`}>
           {user?.active ? "Active" : "Inactive"}
         </span>
@@ -110,7 +130,6 @@ export function EmpDetails({ user = {}, setToggle }) {
 
       {/* Employee Profile */}
       <div className="flex flex-col sm:flex-row gap-5 items-start mb-8">
-
         <img
           src={user?.photo || defaultPhoto}
           alt="Employee"
@@ -139,7 +158,6 @@ export function EmpDetails({ user = {}, setToggle }) {
       {/* Personal Information */}
       <Section title="Personal Information">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
           <Field label="First Name" value={user?.firstname} />
           <Field label="Middle Name" value={user?.middlename} />
           <Field label="Last Name" value={user?.lastname} />
@@ -172,8 +190,7 @@ export function EmpDetails({ user = {}, setToggle }) {
       {/* Government IDs */}
       <Section title="Government Identification">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-          <Field label="Aadhaar Number" value={govtIds?.adhaar_number} />
+          <Field label="Aadhaar Number" value={govtIds?.adhaar_number ? `[Aadhaar Redacted]` : "N/A"} />
           <Field label="PAN Number" value={govtIds?.pan_number} />
           <Field label="Voter ID Number" value={govtIds?.voter_number} />
 
@@ -228,13 +245,11 @@ export function EmpDetails({ user = {}, setToggle }) {
       {/* Salary */}
       <Section title="Salary & Statutory Information">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
           <Field label="Current Salary" value={salary?.currentSalary ? `₹ ${salary.currentSalary}` : "N/A"} />
           <Field label="Basic Pay" value={salary?.basicPay ? `₹ ${salary.basicPay}` : "N/A"} />
           <Field label="Professional Tax" value={salary?.PT ? `₹ ${salary.PT}` : "N/A"} />
           <Field label="ESIC" value={salary?.ESIC ? `₹ ${salary.ESIC}` : "N/A"} />
           <Field label="UAN Number" value={salary?.UAN} />
-
         </div>
 
         {salary?.allowance?.length > 0 && (
@@ -382,10 +397,8 @@ export function EmpCard({ user = {}, setToggle }) {
     user?.familyDetails?.[0];
 
   return (
-    <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-lg shadow-sm p-5 md:p-6">
-
-      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-
+    <div className="max-w-4xl mx-auto bg-white border border-gray-400 rounded-lg shadow-sm p-2 md:p-6">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 pb-2">
         <img
           src={user?.photo || defaultPhoto}
           alt="Employee"
@@ -411,8 +424,8 @@ export function EmpCard({ user = {}, setToggle }) {
             </span>
 
             <span className={`px-3 py-1 rounded text-xs font-medium ${user?.active
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
               }`}>
               {user?.active ? "Active" : "Inactive"}
             </span>
@@ -420,11 +433,9 @@ export function EmpCard({ user = {}, setToggle }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-7 pt-5 border-t border-gray-200">
-
-        <Field label="Blood Group" value={user?.bloodGroup} />
-
-        <Field
+      <div className="border-t col-span-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3 pt-5">
+        <Show label="Blood Group" value={user?.bloodGroup} />
+        <Show
           label="Age"
           value={
             user?.dob
@@ -432,32 +443,31 @@ export function EmpCard({ user = {}, setToggle }) {
               : "N/A"
           }
         />
-
-        <Field
+        <Show
           label="Joining Date"
           value={user?.joiningDate ? dateFormat(user.joiningDate).date : "N/A"}
         />
-
-        <Field
-          label="Aadhaar Number"
-          value={user?.govtIds?.adhaar_number}
-        />
-
-        <Field
-          label="PAN Number"
-          value={user?.govtIds?.pan_number}
-        />
-
-        <Field
-          label="Police Verification"
+        <Show
+          label="Duty Time"
           value={
-            user?.policeVerification === "done"
-              ? "Verified"
-              : "Pending"
+            user?.duty?.startTime
+              ? `${user.duty.startTime} - ${user?.duty?.endTime}`
+              : "N/A"
           }
         />
-
+        <Show label="Department" value={user?.department} />
+        <Show
+          label="Police Verification"
+          value={user?.policeVerification === "notDone" ? "Not Done" : "Done"}
+        />
+        <Show
+          label="Aadhaar Number"
+          value={user?.govtIds?.adhaar_number ? "[Aadhaar Redacted]" : "N/A"}
+          classes='col-span-full'
+        />
+        <Show label="PAN Number" value={user?.govtIds?.pan_number} classes='col-span-full'/>
       </div>
+
 
       {emergencyContact && (
         <div className="mt-5 p-4 bg-gray-50 border border-gray-200 rounded-md">
@@ -484,7 +494,6 @@ export function EmpCard({ user = {}, setToggle }) {
           View Employee Details
         </button>
       </div>
-
     </div>
   );
 }

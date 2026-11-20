@@ -6,8 +6,8 @@ function SelectField({ options, label = '', name = '', register, error, validati
 
   return (
     <div className="mb-1 flex flex-col">
-      <label className="label mt-2 mb-0 font-semibold text-gray-700" htmlFor={fieldId}>
-        {label}
+      <label className="label mt-2 mb-0 font-semibold text-gray-700 text-base" htmlFor={fieldId}>
+         {label}
       </label>
       <select
         id={fieldId}

@@ -4,7 +4,7 @@
 
 @theme {
   --font-signature: "Mr De Haviland", "Great Vibes", cursive;
-
+  --font-inter: "Inter", sans-serif;
   --animate-toast-fade: toast-fade 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 

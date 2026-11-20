@@ -148,6 +148,7 @@ function AddEmp({
   user = null,
   onSubmitEmp,
   userError,
+  setEditingUserObj,
   loading,
   modalId: customModalId,
 }) {
@@ -269,9 +270,9 @@ function AddEmp({
             ? "btn btn-outline btn-sm btn-info"
             : "btn btn-primary btn-md text-base btn-square"
           }`}
-        onClick={() =>
+        onClick={() => {
           document.getElementById(modalId)?.showModal()
-        }
+        }}
       >
         {type === "edit" ? <Pencil className="h-4 w-4" /> : "+"}
       </button>
@@ -294,8 +295,12 @@ function AddEmp({
             </div>
             <button
               type="button"
-              onClick={() => document.getElementById(modalId)?.close()}
-              className="btn btn-sm btn-circle btn-ghost">
+              onClick={() => {
+                document.getElementById(modalId)?.close();
+                setEditingUserObj?.(null);
+              }}
+              className="btn btn-sm btn-circle btn-ghost"
+            >
               ✕
             </button>
           </div>
@@ -375,7 +380,7 @@ function AddEmp({
                   register={register}
                   name="gender"
                   label="Gender"
-                />              
+                />
 
                 <InputField
                   label="DOB"
@@ -383,16 +388,7 @@ function AddEmp({
                   type="date"
                   register={register}
                 />
-                {/* <InputField
-                  label="Residential Address"
-                  name="residAddress"
-                  register={register}
-                />
-                <InputField
-                  label="Current Address"
-                  name="currAddress"
-                  register={register}
-                /> */}
+
                 <SelectField
                   label="Blood Group"
                   name="bloodGroup"
@@ -584,7 +580,7 @@ function AddEmp({
             <div className="card bg-base-100 shadow-md border border-base-300 p-3 md:p-5 rounded-xl space-y-4">
               <h3 className="font-bold text-lg">Government Identification</h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 {govtIdsArray?.map((item) => {
                   const numberPath = `govtIds.${item.numberField.name}`;
                   const filePath = `govtIds.${item.fileField.name}`;
@@ -601,6 +597,7 @@ function AddEmp({
                         name={numberPath}
                         type="text"
                         register={register}
+                        showLabel={false}
                       />
 
                       <input type="hidden" {...register(filePath)} />
@@ -636,6 +633,7 @@ function AddEmp({
                             `${item.title} uploaded successfully!`
                           )
                         }
+                        type="btn"
                       />
                     </div>
                   );
@@ -668,11 +666,13 @@ function AddEmp({
                         label={`Certificate ${index + 1} Name`}
                         name={`medicalDetails.${index}.name`}
                         register={register}
+                        placeholder="--"
                       />
                       <InputField
                         label="Number"
                         name={`medicalDetails.${index}.number`}
                         register={register}
+                        placeholder="--"
                       />
                       <div className="flex gap-2 items-center">
                         <div className="flex-1">
@@ -828,11 +828,13 @@ function AddEmp({
                       label="Account Holder Name"
                       name={`bankDetails.${index}.name`}
                       register={register}
+                      placeholder="--"
                     />
                     <InputField
                       label="Account Number"
                       name={`bankDetails.${index}.number`}
                       register={register}
+                      placeholder="--"
                     />
                     <div className="flex gap-2 items-end">
                       <div className="flex-1">
@@ -840,6 +842,7 @@ function AddEmp({
                           label="IFSC Code"
                           name={`bankDetails.${index}.IFSC`}
                           register={register}
+                          placeholder="--"
                         />
                       </div>
                       {bankFields.length > 1 && (
@@ -865,30 +868,35 @@ function AddEmp({
                   error={errors}
                   label="Current Salary"
                   name="salaryDetails.currentSalary"
+                  placeholder="--"
                 />
                 <InputField
                   register={register}
                   error={errors}
                   label="Basic Salary"
                   name="salaryDetails.basicPay"
+                  placeholder="--"
                 />
                 <InputField
                   register={register}
                   error={errors}
                   label="Professional Tax"
                   name="salaryDetails.PT"
+                  placeholder="--"
                 />
                 <InputField
                   register={register}
                   error={errors}
                   label="ESIC"
                   name="salaryDetails.ESIC"
+                  placeholder="--"
                 />
                 <InputField
                   register={register}
                   error={errors}
                   label="UAN Number"
                   name="salaryDetails.UAN"
+                  placeholder="--"
                 />
               </div>
 

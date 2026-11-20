@@ -29,7 +29,7 @@ function InputField({
           type={type}
           disabled={disabled}
           id={fieldId}
-          className={`input w-full text-black ${fieldError ? 'input-error border-error' : 'border-success'} placeholder:text-gray-600 placeholder:font-semibold `}
+          className={`input w-full text-black ${fieldError ? 'input-error border-error' : 'border-success'} placeholder:text-gray-400 placeholder:font-semibold `}
           placeholder={placeholder || label}
           {...(register
             ? register(name, {

@@ -32,10 +32,9 @@ export default DashboardStats
 function StatsCard({ stats }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 ">
-      {stats.map((st) => {
-        // Extract the specific color theme for the current label
+      {stats?.map((st) => {
         const colors = dashboardStatsColor(st.label)
-        // console.log(colors)
+
         return (
           <div
             key={st.label}

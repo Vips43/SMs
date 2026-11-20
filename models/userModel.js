@@ -97,8 +97,6 @@ const userSchema = new mongoose.Schema(
     department: { type: String, default: "" },
     active: { type: Boolean, default: true },
 
-    dutyTime: { startTime: Date, endTime: Date },
-
     userType: { type: String, default: "" },
     dob: { type: Date },
     advance: [advanceSchema],
@@ -124,6 +122,18 @@ const userSchema = new mongoose.Schema(
 
     salaryHistory: [salaryRecordSchema],
 
+    duty: {
+      date: { type: Date, default: null },
+      startTime: { type: String, default: "10:00", trim: true },
+      endTime: { type: String, default: "19:00", trim: true },
+      site: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Site",
+        default: null,
+      },
+      instruction: { type: String, default: "", trim: true },
+      updatedAt: { type: Date, default: null },
+    },
     resume: { type: String },
     govtIds: {
       adhaar_number: String,
@@ -163,6 +173,7 @@ userSchema.virtual("attendenceRecords", {
   localField: "_id",
   foreignField: "user",
 });
+
 userSchema.virtual("dutyRecords", {
   ref: "Duty",
   localField: "_id",
