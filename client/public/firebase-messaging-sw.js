@@ -11,13 +11,13 @@ importScripts(
 );
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDhXRpuajlyPLuWN5uZbbMM20YrWs3FGlY",
-  authDomain: "project-587c6976-454c-43a7-8f3.firebaseapp.com",
-  projectId: "project-587c6976-454c-43a7-8f3",
-  storageBucket: "project-587c6976-454c-43a7-8f3.firebasestorage.app",
-  messagingSenderId: "236797180014",
-  appId: "1:236797180014:web:fcbba90bb4e35afcb30e7f",
-  measurementId: "G-P6RMZYW83F",
+  apiKey: "AIzaSyDDyEFuwkrJ1XQpr1oU4Fa9CUybUnSCx9E",
+  authDomain: "notification-9d3ab.firebaseapp.com",
+  projectId: "notification-9d3ab",
+  storageBucket: "notification-9d3ab.firebasestorage.app",
+  messagingSenderId: "168780514012",
+  appId: "1:168780514012:web:fbadf30402afdcb915ea19",
+  measurementId: "G-ZTJ5QE20JW"
 };
 
 //eslint-disable-next-line

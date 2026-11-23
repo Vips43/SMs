@@ -201,6 +201,24 @@ userSchema.virtual("dutyRecords", {
   foreignField: "user",
 });
 
+const handleDuplicateKeyError = function (error, doc, next) {
+  if (error.name === "MongoServerError" && error.code === 11000) {
+    const field = Object.keys(error.keyPattern || error.keyValue || {})[0];
+    const customMsg =
+      field === "email"
+        ? "Email already exists"
+        : field === "phone"
+          ? "Phone number already exists"
+          : `${field} must be unique`;
+
+    const err = new Error(customMsg);
+    err.statusCode = 409;
+    return next(err);
+  }
+  next(error);
+};
+
+userSchema.post("save", handleDuplicateKeyError);
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   const salt = await bcrypt.genSalt(10);
@@ -223,7 +241,7 @@ async function createUser() {
     firstname: "vipul",
     lastname: "gehlot",
     email: "vipulgehlot43@gmail.com",
-    password: "nananana",
+    password: "12345",
     role: "admin",
   });
   console.log("usercreated");

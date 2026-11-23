@@ -3,7 +3,6 @@ import User from "../models/userModel.js";
 import { startEndDate } from "./emp.service.js";
 import Attendence from "../models/attendenceModel.js";
 
-
 const otherServices = {
   reminderNotification: async () => {
     const { endOfDay, startOfDay } = startEndDate();
@@ -45,9 +44,14 @@ const otherServices = {
     for (const user of usersToRemind) {
       const userName = user.firstname || "there";
 
+      // 1. Extract token strings from the subdocument array
+      const tokens = user.fcmTokens.map((item) => item.token).filter(Boolean);
+
+      if (tokens.length === 0) continue;
+
       try {
         const res = await getMessaging().sendEachForMulticast({
-          tokens: user.fcmTokens,
+          tokens,
           notification: {
             title: `Hello ${userName}, Time to Check Out!`,
             body: "It looks like you haven't checked out for today yet. Please remember to clock out.",
@@ -61,7 +65,7 @@ const otherServices = {
         successCount += res.successCount;
         failureCount += res.failureCount;
 
-        // collect dead tokens for cleanup
+        // 2. Collect dead token strings using the mapped `tokens` array
         const dead = [];
         res.responses.forEach((r, i) => {
           if (!r.success) {
@@ -76,15 +80,16 @@ const otherServices = {
               code === "messaging/registration-token-not-registered" ||
               code === "messaging/invalid-registration-token"
             ) {
-              dead.push(user.fcmTokens[i]);
+              dead.push(tokens[i]);
             }
           }
         });
 
+        // 3. Pull the subdocument matching the dead `token` field
         if (dead.length) {
           await User.updateOne(
             { _id: user._id },
-            { $pull: { fcmTokens: { $in: dead } } },
+            { $pull: { fcmTokens: { token: { $in: dead } } } },
           );
         }
 

@@ -2,13 +2,13 @@ import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
 const app = initializeApp({
-  apiKey: "AIzaSyDhXRpuajlyPLuWN5uZbbMM20YrWs3FGlY",
-  authDomain: "project-587c6976-454c-43a7-8f3.firebaseapp.com",
-  projectId: "project-587c6976-454c-43a7-8f3",
-  storageBucket: "project-587c6976-454c-43a7-8f3.firebasestorage.app",
-  messagingSenderId: "236797180014",
-  appId: "1:236797180014:web:fcbba90bb4e35afcb30e7f",
-  measurementId: "G-P6RMZYW83F",
+  apiKey: "AIzaSyDDyEFuwkrJ1XQpr1oU4Fa9CUybUnSCx9E",
+  authDomain: "notification-9d3ab.firebaseapp.com",
+  projectId: "notification-9d3ab",
+  storageBucket: "notification-9d3ab.firebasestorage.app",
+  messagingSenderId: "168780514012",
+  appId: "1:168780514012:web:2492ad8ed9d135f615ea19",
+  measurementId: "G-VJYRL67T9K",
 });
 
 export const requestForToken = async () => {
@@ -19,7 +19,7 @@ export const requestForToken = async () => {
     );
     return await getToken(getMessaging(app), {
       vapidKey:
-        "BFvAIhcFnJUO37L-1cu7dG2Igj_GIiWvqMxQyoK_6FQiJhR2M9E0Fn0Iq7aRmjPNwjdIpECli1MCNTYhuhl9ZCo",
+        "BKHyHYzB2d1ecg5HgPs6ETzb2-jAq8c0uRuQU2JyPo6pg5ijFEJGRhiEaqjyZPFL9p_JoenPeq57QGtydvAJIlQ",
       serviceWorkerRegistration: registration,
     });
   } catch (e) {

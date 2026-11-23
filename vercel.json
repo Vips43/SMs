@@ -1,29 +1,28 @@
 {
-  "version": 2,
-  "builds": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "express",
+      "entrypoint": "api/index.js"
+    },
+    "client": {
+      "root": "client",
+      "framework": "vite"
+    }
+  },
+  "rewrites": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "client/dist"
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "app"
       }
     },
     {
-      "src": "api/index.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.js"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": {
+        "service": "client"
+      }
     }
   ],
   "crons": [
@@ -33,7 +32,7 @@
     },
     {
       "path": "/api/cron/auto-checkout",
-      "schedule": "0 14 * * *"
+      "schedule": "57 13 * * *"
     }
   ]
 }

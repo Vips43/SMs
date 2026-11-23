@@ -21,7 +21,10 @@ import User from "./models/userModel.js";
 import otherRouter from "./routes/otherRoutes.js";
 import { autoCheckoutUser, cronService } from "./services/cron.service.js";
 import { saveFCMToken } from "./controllers/userController.js";
+import dns from "node:dns";
 
+
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 dotenv.config();
 
 if (!getApps().length) {
@@ -62,7 +65,7 @@ cloudinary.config({
 });
 
 const mongoUri =
-  process.env.NODE_ENV === "production"
+  process.env.NODE_ENV !== "production"
     ? process.env.MONGO_URI
     : process.env.MONGO_LOCAL;
 
