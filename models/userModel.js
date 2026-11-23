@@ -42,6 +42,13 @@ const advanceSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
 });
 
+const educationSchema = new mongoose.Schema({
+  degree: { type: String },
+  institute: { type: String },
+  image: { type: String },
+  grade: { type: String },
+});
+
 const addressFields = {
   l1: { type: String, default: "", trim: true },
   l2: { type: String, default: "", trim: true },
@@ -147,6 +154,7 @@ const userSchema = new mongoose.Schema(
     joiningDate: { type: Date, default: null },
     policeVerification: { type: String, default: "notDone" },
 
+    eduDetails: [educationSchema],
     medicalDetails: [medicalRecordSchema],
     familyDetails: [familyMemberSchema],
     bankDetails: [bankDetailsSchema],

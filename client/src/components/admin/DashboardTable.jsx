@@ -24,7 +24,7 @@ function DashboardTable({ presents, absents, halfday, checkouts, label }) {
               const recordStatus = d?.status || d?.attendenceRecords?.[0]?.status || "Absent";
               const checkIn = d?.checkInTime;
               const checkOut = d?.checkOutTime;
-              const duty = `${d?.duty?.startTime} - ${d?.duty?.endTime}`;
+              const duty = `${d?.duty?.startTime || ""} - ${d?.duty?.endTime || ""}`;
 
               return (
                 <tr key={d._id || idx} className="hover">
@@ -50,7 +50,7 @@ function DashboardTable({ presents, absents, halfday, checkouts, label }) {
                       {recordStatus}
                     </span>
                   </td>
-                  <td>{duty || "N/A"}</td>
+                  <td>{duty}</td>
                   <td>{checkIn ? dateFormat(checkIn)?.time : "N/A"}</td>
                   <td>{checkOut ? dateFormat(checkOut)?.time : "N/A"}</td>
                 </tr>

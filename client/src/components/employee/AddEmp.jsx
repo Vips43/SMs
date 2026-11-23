@@ -118,15 +118,18 @@ function getDefaults(user) {
     bloodGroup: user?.bloodGroup || "N/A",
     joiningDate: formatDateForInput(user?.joiningDate),
     resume: user?.resume || "",
+    eduDetails:
+      user?.eduDetails?.length ? user?.eduDetails : [{ degree: "", year: "", institute: "", grade: "" }]
+    ,
+    familyDetails: user?.familyDetails?.length
+      ? user?.familyDetails
+      : [{ emergency: false, name: "", relation: "", phone: "", email: "" }],
     medicalDetails: user?.medicalDetails?.length
-      ? user.medicalDetails
+      ? user?.medicalDetails
       : [{ name: "", number: "", file: "" }],
     bankDetails: user?.bankDetails?.length
-      ? user.bankDetails
+      ? user?.bankDetails
       : [{ name: "", number: "", IFSC: "" }],
-    familyDetails: user?.familyDetails?.length
-      ? user.familyDetails
-      : [{ emergency: false, name: "", relation: "", phone: "", email: "" }],
     salaryDetails: {
       currentSalary: user?.salaryDetails?.currentSalary ?? "",
       basicPay: user?.salaryDetails?.basicPay ?? "",
@@ -179,6 +182,12 @@ function AddEmp({
   useEffect(() => {
     if (type === "edit" && user) reset(getDefaults(user));
   }, [user, type, reset]);
+
+  const {
+    fields: eduFields,
+    append: appendEdu,
+    remove: removeEdu,
+  } = useFieldArray({ control, name: "eduDetails" });
 
   const {
     fields: familyFields,
@@ -635,6 +644,110 @@ function AddEmp({
                         }
                         type="btn"
                       />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Certificate Details Card */}
+            <div className="card bg-base-200 shadow-sm outline outline-gray-400 p-2 md:p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-semibold text-lg">Educational Details</h4>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline btn-primary"
+                  onClick={() =>
+                    appendMedical({ degree: "", year: "", institute: "", grade: "" })
+                  }>
+                  + Add Education
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {eduFields.map((field, index) => {
+                  const fileValue = watch(`eduDetails?.${index}?.file`);
+                  return (
+                    <div
+                      key={field.id}
+                      className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end bg-base-100 p-3 rounded-box">
+                      <div className="col-span-2">
+                        <InputField
+                          label={`Degree`}
+                          name={`eduDetails.${index}.degree`}
+                          register={register}
+                          placeholder=" "
+                        />
+                      </div>
+                      <InputField
+                        label="Date/Year"
+                        name={`eduDetails.${index}.year`}
+                        register={register}
+                        placeholder=" "
+                      />
+                      <div className="col-span-2">
+                        <InputField
+                          label="Institute"
+                          name={`eduDetails.${index}.institute`}
+                          register={register}
+                          placeholder=" "
+                        />
+                      </div>
+                      <InputField
+                        label="Grade"
+                        name={`eduDetails.${index}.grade`}
+                        register={register}
+                        placeholder="%"
+                      />
+                      <div className="flex gap-2 items-center hidden">
+                        <div className="flex-1">
+                          <input
+                            type="hidden"
+                            {...register(`eduDetails.${index}.file`)}
+                          />
+                          {fileValue ? (
+                            <div className="flex items-center justify-between bg-base-200 rounded-box">
+                              <a
+                                href={fileValue}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="link link-primary text-xs">
+                                View File
+                              </a>
+                              <button
+                                type="button"
+                                className="btn btn-xs btn-outline btn-error"
+                                onClick={() =>
+                                  setValue(`medicalDetails.${index}.file`, "", {
+                                    shouldDirty: true,
+                                  })
+                                }>
+                                Change
+                              </button>
+                            </div>
+                          ) : (
+                            <InputFile
+                              id={`medical-file-${index}`}
+                              label="File (.pdf, image)"
+                              onChange={(e) =>
+                                handleFileUpload(
+                                  e,
+                                  `medicalDetails.${index}.file`,
+                                  "Certificate uploaded successfully!",
+                                )
+                              }
+                            />
+                          )}
+                        </div>
+                        {medicalFields.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn btn-square btn-error btn-sm"
+                            onClick={() => removeMedical(index)}>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
