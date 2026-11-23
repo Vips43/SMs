@@ -2,7 +2,6 @@ import { Eye, Plus, PlusIcon, SearchIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
-import AddEmp from "@/components/employee/AddEmp";
 import Search from "@/components/form/Search";
 import AddSite from "@/components/oth/AddSite";
 import ModalButton from "@/components/oth/ModalButton";
@@ -13,6 +12,7 @@ import EmployeeList from "@/components/employee/EmployeeList";
 function Employees() {
   const [toggle, setToggle] = useState({ search: false, sites: false });
   const [editingUserObj, setEditingUserObj] = useState(null);
+  const [modalState, setModalState] = useState({ type: null, user: null });
 
   useEffect(() => {
     document.title = "SMs | Employees";
@@ -31,10 +31,31 @@ function Employees() {
     name: empData.name,
     page: empData.page,
   });
-  const { mutateAsync: addUser, isFetching: addingUser, error } = useAddUser();
-  const { register, formState: { errors }, handleSubmit, } = useForm();
 
-console.log(response)
+  const {
+    mutateAsync: addUser,
+    isPending: addingUser,
+    error: addUserError,
+  } = useAddUser();
+
+  const {
+    register,
+    formState: { errors },
+    handleSubmit,
+  } = useForm();
+
+  const openModal = (type, user = null) => {
+    if (type === "edit" && user) {
+      setEditingUserObj(user);
+    }
+    setModalState({ type, user });
+  };
+
+  const closeModal = () => {
+    setEditingUserObj(null);
+    setModalState({ type: null, user: null });
+  };
+
   const search = (data) => {
     setEmpData((prev) => ({ ...prev, ...data, page: 1 }));
   };
@@ -45,7 +66,8 @@ console.log(response)
         <div
           tabIndex={0}
           role="button"
-          className="btn btn-lg btn-circle btn-info">
+          className="btn btn-lg btn-circle btn-info"
+        >
           <PlusIcon />
         </div>
 
@@ -55,29 +77,33 @@ console.log(response)
 
         <div className="bg-blue-300 pl-1 rounded-md flex items-center justify-between gap-3 w-fit">
           <span className="text-sm font-medium">Add Employee</span>
-          <AddEmp
-            type="add"
-            onSubmitEmp={addUser}
-            userError={error}
-            loading={addingUser}
-          />
+          <button
+            type="button"
+            className="btn btn-primary btn-md text-base btn-square"
+            onClick={() => openModal("add", null)}
+          >
+            +
+          </button>
         </div>
+
         <div className="bg-blue-300 pl-1 rounded-md flex items-center justify-between gap-3 w-fit">
           <span className="text-sm font-medium">Show Sites</span>
           <ModalButton
             id="showSiteModal"
             onClick={() => {
-              setToggle((prev) => ({ ...prev, sites: prev.sites }));
+              setToggle((prev) => ({ ...prev, sites: !prev.sites }));
             }}
             title={
               <span>
-                <Eye className="h-4 w-4" />{" "}
+                <Eye className="h-4 w-4" />
               </span>
             }
-            btn="btn-secondary btn-md btn-square">
+            btn="btn-secondary btn-md btn-square"
+          >
             <ShowSites show={toggle.sites} />
           </ModalButton>
         </div>
+
         <div className="bg-blue-300 pl-1 rounded-md flex items-center justify-between gap-3 w-fit">
           <span className="text-sm font-medium">Add Site</span>
           <ModalButton
@@ -86,7 +112,8 @@ console.log(response)
               setToggle((prev) => ({ ...prev, sites: !prev.sites }));
             }}
             title={<Plus className="w-4 h-4" />}
-            btn="btn-md btn-primary">
+            btn="btn-md btn-primary"
+          >
             <AddSite />
           </ModalButton>
         </div>
@@ -119,10 +146,18 @@ console.log(response)
         />
       </div>
 
-      {/* Added min-h-[350px] or padding-bottom to give room for dropdowns */}
-      <EmployeeList response={response} responding={responding}
+      <EmployeeList
+        response={response}
+        responding={responding}
         editingUserObj={editingUserObj}
-        setEditingUserObj={setEditingUserObj} />
+        setEditingUserObj={setEditingUserObj}
+        modalState={modalState}
+        openModal={openModal}
+        closeModal={closeModal}
+        addUser={addUser}
+        addingUser={addingUser}
+        addUserError={addUserError}
+      />
     </div>
   );
 }

@@ -1,19 +1,37 @@
-import { useChangePassword, useEditUser, useMarkActiveMutation } from "@/hooks/empHooks";
+import {
+  useChangePassword,
+  useEditUser,
+  useMarkActiveMutation,
+} from "@/hooks/empHooks";
 import { useEffect, useRef, useState } from "react";
 import InputField from "../form/InputField";
 import AddEmp from "./AddEmp";
 import EmpCard, { EmpDetails } from "./EmpCard";
-import { AlarmClock, Eye, IndianRupee, LockKeyholeOpenIcon, Notebook, Pencil } from "lucide-react";
+import {
+  AlarmClock,
+  Eye,
+  IndianRupee,
+  LockKeyholeOpenIcon,
+  Notebook,
+  Pencil,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { dateFormat } from "@/utils/helperfn";
 import ChangeDutyTime from "./ChangeDutyTime";
 import { useGetSiteQuery } from "@/hooks/siteHooks";
 
-function EmployeeList({ response, responding, editingUserObj, setEditingUserObj }) {
-  // type: "view" | "duty" | "password" | "advance" | null;
-  
-  const [modalState, setModalState] = useState({ type: null, user: null });
+function EmployeeList({
+  response,
+  responding,
+  editingUserObj,
+  modalState,
+  openModal,
+  closeModal,
+  addUser,
+  addingUser,
+  addUserError,
+}) {
   const [toggle, setToggle] = useState(false);
   const dialogRef = useRef(null);
 
@@ -24,24 +42,19 @@ function EmployeeList({ response, responding, editingUserObj, setEditingUserObj 
   const { data: users } = response || {};
 
   useEffect(() => {
-    if (modalState.type && dialogRef.current && !dialogRef.current.open) {
+    if (modalState?.type && dialogRef.current && !dialogRef.current.open) {
       dialogRef.current.showModal();
-    }
-  }, [modalState.type, modalState.user]);
-
-  const openModal = (type, user) => {
-    if (type === "view") setToggle(false);
-    setModalState({ type, user });
-  };
-
-  const closeModal = () => {
-    if (dialogRef.current?.open) {
+    } else if (!modalState?.type && dialogRef.current?.open) {
       dialogRef.current.close();
     }
-    setModalState({ type: null, user: null });
+  }, [modalState?.type, modalState?.user]);
+
+  const handleOpen = (type, user = null) => {
+    if (type === "view") setToggle(false);
+    openModal(type, user);
   };
 
-  const activeUser = modalState.user;
+  const activeUser = modalState?.user || editingUserObj;
 
   return (
     <div className="flex-1 min-h-0 m-1 flex flex-col overflow-hidden shadow-lg">
@@ -107,12 +120,7 @@ function EmployeeList({ response, responding, editingUserObj, setEditingUserObj 
                       <button
                         type="button"
                         className="btn btn-outline btn-sm btn-info"
-                        onClick={() => {
-                          setEditingUserObj(user);
-                          document
-                            .getElementById("modal_shared_edit_emp")
-                            ?.showModal();
-                        }}
+                        onClick={() => handleOpen("edit", user)}
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -123,7 +131,7 @@ function EmployeeList({ response, responding, editingUserObj, setEditingUserObj 
                       <button
                         type="button"
                         className="btn btn-secondary btn-sm"
-                        onClick={() => openModal("view", user)}
+                        onClick={() => handleOpen("view", user)}
                       >
                         <Eye className="h-5" />
                       </button>
@@ -134,7 +142,7 @@ function EmployeeList({ response, responding, editingUserObj, setEditingUserObj 
                       <button
                         type="button"
                         className="btn btn-info btn-sm"
-                        onClick={() => openModal("duty", user)}
+                        onClick={() => handleOpen("duty", user)}
                       >
                         <AlarmClock className="h-4.5" />
                       </button>
@@ -145,7 +153,7 @@ function EmployeeList({ response, responding, editingUserObj, setEditingUserObj 
                       <button
                         type="button"
                         className="btn btn-accent btn-sm"
-                        onClick={() => openModal("password", user)}
+                        onClick={() => handleOpen("password", user)}
                       >
                         <LockKeyholeOpenIcon className="h-4" />
                       </button>
@@ -156,21 +164,25 @@ function EmployeeList({ response, responding, editingUserObj, setEditingUserObj 
                       <button
                         type="button"
                         className="btn btn-success btn-sm"
-                        onClick={() => openModal("advance", user)}
+                        onClick={() => handleOpen("advance", user)}
                       >
                         <IndianRupee className="h-4" />
                       </button>
                     </div>
 
                     {/* Active Toggle */}
-                    <div className="tooltip tooltip-left" data-tip="Mark Active/Inactive">
+                    <div
+                      className="tooltip tooltip-left"
+                      data-tip="Mark Active/Inactive"
+                    >
                       <input
                         type="checkbox"
                         checked={!!user?.active}
                         className="toggle toggle-success"
                         onChange={async () => {
                           const confirmed = window.confirm(
-                            `Are you sure want to mark user as ${!user.active ? "Active" : "InActive"}`
+                            `Are you sure want to mark user as ${!user.active ? "Active" : "InActive"
+                            }`
                           );
                           if (confirmed) {
                             try {
@@ -194,30 +206,27 @@ function EmployeeList({ response, responding, editingUserObj, setEditingUserObj 
         </table>
       </div>
 
-      {/* Rendered ONLY when a row modal action is clicked */}
-      {modalState.type && activeUser && (
-        <dialog
-          ref={dialogRef}
-          onClose={closeModal}
-          className="modal"
-        >
-          <div className="modal-box max-w-2xl relative bg-base-100">
+      {/* Shared modal for Add/Edit Employee and row actions */}
+      {modalState?.type && (activeUser || modalState.type === "add") && (
+        <dialog ref={dialogRef} onClose={closeModal} className="modal">
+          <div className="modal-box max-w-4xl relative bg-base-100">
             <button
               type="button"
               onClick={closeModal}
-              className="btn btn-sm btn-circle btn-ghost absolute right-3 top-3"
+              className="btn btn-sm btn-circle btn-ghost absolute right-3 top-3 z-10"
             >
               ✕
             </button>
 
             {modalState.type === "view" &&
+              activeUser &&
               (!toggle ? (
                 <EmpCard user={activeUser} setToggle={setToggle} />
               ) : (
                 <EmpDetails user={activeUser} setToggle={setToggle} />
               ))}
 
-            {modalState.type === "duty" && (
+            {modalState.type === "duty" && activeUser && (
               <ChangeDutyTime
                 user={activeUser}
                 sites={sites}
@@ -225,29 +234,40 @@ function EmployeeList({ response, responding, editingUserObj, setEditingUserObj 
               />
             )}
 
-            {modalState.type === "password" && (
+            {modalState.type === "password" && activeUser && (
               <ChangePassword user={activeUser} />
             )}
 
-            {modalState.type === "advance" && (
+            {modalState.type === "advance" && activeUser && (
               <AdvanceForm emp={activeUser} editUser={editUser} />
+            )}
+
+            {modalState.type === "add" && (
+              <AddEmp
+                type="add"
+                onSubmitEmp={addUser}
+                userError={addUserError}
+                loading={addingUser}
+                onSuccess={closeModal}
+              />
+            )}
+
+            {modalState.type === "edit" && activeUser && (
+              <AddEmp
+                type="edit"
+                user={activeUser}
+                onSubmitEmp={editUser}
+                loading={editingUser}
+                onSuccess={closeModal}
+              />
             )}
           </div>
           <form method="dialog" className="modal-backdrop">
-            <button type="submit" onClick={closeModal}>close</button>
+            <button type="submit" onClick={closeModal}>
+              close
+            </button>
           </form>
         </dialog>
-      )}
-
-      {editingUserObj && (
-        <AddEmp
-          type="edit"
-          user={editingUserObj}
-          setEditingUserObj={setEditingUserObj}
-          onSubmitEmp={editUser}
-          loading={editingUser}
-          modalId="modal_shared_edit_emp"
-        />
       )}
     </div>
   );
