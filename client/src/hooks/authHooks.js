@@ -1,6 +1,9 @@
 import useAuthStore from "@/store/authStore";
+import { getCreateDeviceId } from "@/utils/device";
 import { fetchFn } from "@/utils/queryClient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+const deviceId = getCreateDeviceId();
 
 const useLoginMutation = () => {
   const qc = useQueryClient();
@@ -25,7 +28,7 @@ const useLogout = () => {
   return useMutation({
     mutationKey: ["user"],
     mutationFn: async () => {
-      await fetchFn("auth/logout", { method: "POST" });
+      await fetchFn("auth/logout", { method: "POST", body: deviceId });
       return { msg: "logout success" };
     },
     onSuccess: () => {

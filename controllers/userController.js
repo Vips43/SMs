@@ -1,4 +1,5 @@
 import { createError } from "../middleware/errorMiddleware.js";
+import User from "../models/userModel.js";
 import userService, { dashboardService } from "../services/user.service.js";
 
 const loginUser = async (req, res, next) => {
@@ -18,6 +19,66 @@ const loginUser = async (req, res, next) => {
       .json({ success: true, msg: "Logged in successfully", user });
   } catch (error) {
     next(error);
+  }
+};
+
+const saveFCMToken = async (req, res, next) => {
+  try {
+    const { token, deviceId, deviceName } = req.body;
+    if (!token || !deviceId) {
+      return res
+        .status(400)
+        .json({ success: false, msg: "Token and deviceId are required" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, msg: "User not found" });
+    }
+
+    // Normalize any legacy string elements or entries missing deviceId/token
+    user.fcmTokens = (user.fcmTokens || [])
+      .map((item, idx) => {
+        if (typeof item === "string") {
+          return {
+            deviceId: `legacy_${idx + 1}`,
+            token: item,
+            deviceName: "Legacy Device",
+            lastActive: new Date(0),
+          };
+        }
+        return item;
+      })
+      .filter((item) => item && item.deviceId && item.token);
+
+    const existingIndex = user.fcmTokens.findIndex(
+      (item) => item.deviceId === deviceId,
+    );
+
+    if (existingIndex > -1) {
+      user.fcmTokens[existingIndex].token = token;
+      if (deviceName) user.fcmTokens[existingIndex].deviceName = deviceName;
+      user.fcmTokens[existingIndex].lastActive = new Date();
+    } else {
+      user.fcmTokens.push({
+        deviceId,
+        token,
+        deviceName: deviceName || "PWA Browser",
+        lastActive: new Date(),
+      });
+
+      if (user.fcmTokens.length > 3) {
+        user.fcmTokens.sort(
+          (a, b) => new Date(b.lastActive) - new Date(a.lastActive),
+        );
+        user.fcmTokens = user.fcmTokens.slice(0, 3);
+      }
+    }
+
+    await user.save();
+    res.json({ ok: true, devicesCount: user.fcmTokens.length });
+  } catch (e) {
+    next(e);
   }
 };
 
@@ -54,6 +115,14 @@ const changePassword = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
   try {
+    const deviceId = req.body?.deviceId || req.query?.deviceId;
+
+    if (req.user?.id && deviceId) {
+      await User.findByIdAndUpdate(req.user.id, {
+        $pull: { fcmTokens: { deviceId } },
+      });
+    }
+
     res.clearCookie("EMS_token", {
       path: "/",
       sameSite: "strict",
@@ -170,6 +239,7 @@ const getMonthlyAttandenceReport = async (req, res, next) => {
 
 export {
   loginUser,
+  saveFCMToken,
   handleRefresh,
   changePassword,
   logout,

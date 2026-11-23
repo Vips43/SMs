@@ -20,6 +20,7 @@ import siteRouter from "./routes/siteRoutes.js";
 import User from "./models/userModel.js";
 import otherRouter from "./routes/otherRoutes.js";
 import { autoCheckoutUser, cronService } from "./services/cron.service.js";
+import { saveFCMToken } from "./controllers/userController.js";
 
 dotenv.config();
 
@@ -35,7 +36,6 @@ if (!getApps().length) {
     console.error("Firebase init failed:", err.message);
   }
 }
-
 
 const app = express();
 
@@ -76,27 +76,15 @@ app.get("/api/health", (req, res) => {
   res.status(200).json({ success: true, message: "API is running" });
 });
 
-app.post("/api/token/fcm-token", authentication, async (req, res, next) => {
-  try {
-    const { token } = req.body;
-    if (!token)
-      return res.status(400).json({ success: false, msg: "Token required" });
-    await User.findByIdAndUpdate(req.user.id, {
-      $addToSet: { fcmTokens: token },
-    });
-
-    res.json({ ok: true });
-  } catch (e) {
-    next(e);
-  }
-});
-
 app.use("/api/auth", authRoute);
 app.use("/api/dash", dashRoute);
 app.use("/api/user", userRouter);
 app.use("/api/emp", authentication, empRouter);
 app.use("/api/site", authentication, siteRouter);
 app.use("/api/fcm", otherRouter);
+
+//save token 
+app.post("/api/token/fcm-token", authentication, saveFCMToken);
 
 app.get("/api/cron/send-reminders", cronService);
 app.get("/api/cron/auto-checkout", autoCheckoutUser);

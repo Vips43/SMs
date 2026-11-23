@@ -39,6 +39,8 @@ const userService = {
     };
   },
 
+
+  //not used
   refreshSession: async (oldToken) => {
     if (!oldToken) throw createError("Unauthorized", 401);
 

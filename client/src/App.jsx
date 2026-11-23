@@ -25,7 +25,6 @@ function App() {
 
   const startTracking = useGpsStore((state) => state.startTracking);
   const stopTracking = useGpsStore((state) => state.stopTracking);
-
   const location = useGpsStore((state) => state.location);
 
   const { mutateAsync: setCoords } = useGetCoOrdinatesMutation();
@@ -46,7 +45,6 @@ function App() {
 
     sendCoords();
   }, [location, user?.user?.id, setCoords]);
-
   useEffect(() => {
     startTracking();
     return () => stopTracking();

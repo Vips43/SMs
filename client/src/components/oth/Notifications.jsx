@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 import { onForegroundMessage, requestForToken } from "@/firebase";
 import { fetchFn } from "@/utils/queryClient";
+import { getCreateDeviceId, getDeviceLabel } from "@/utils/device";
 
 export default function useNotifications(userId) {
+  const deviceId = getCreateDeviceId();
+  const deviceName = getDeviceLabel();
   useEffect(() => {
 
     if (!userId) {
@@ -12,7 +15,8 @@ export default function useNotifications(userId) {
 
     requestForToken().then((token) => {
       if (token) {
-        fetchFn("token/fcm-token", { method: "POST", body: { token } }).catch(console.error);
+
+        fetchFn("token/fcm-token", { method: "POST", body: { token, deviceId, deviceName } }).catch(console.error);
       }
     });
 

@@ -510,11 +510,19 @@ export const dutyServices = {
     }
     await user.save();
 
-    // 3. Notify employee via FCM
-    if (Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
+    // 3. Notify employee via FCM across up to 3 registered devices
+    const validDevices = Array.isArray(user.fcmTokens)
+      ? user.fcmTokens.filter(
+          (d) => d && typeof d.token === "string" && d.token.trim(),
+        )
+      : [];
+
+    if (validDevices.length > 0) {
       try {
+        const tokens = validDevices.map((d) => d.token);
+
         const response = await getMessaging().sendEachForMulticast({
-          tokens: user.fcmTokens,
+          tokens,
           notification: {
             title: "Hello! Your Duty time has changed",
             body:
@@ -531,16 +539,20 @@ export const dutyServices = {
 
         if (response.failureCount > 0) {
           const invalidTokens = [];
+
           response.responses.forEach((resp, idx) => {
             if (!resp.success) {
-              const token = user.fcmTokens[idx];
-              console.error(`Token error [${token}]:`, resp.error?.message);
+              const device = validDevices[idx];
+              console.error(
+                `Token error [${device?.deviceId || "unknown"}]:`,
+                resp.error?.message,
+              );
               if (
                 resp.error?.code ===
                   "messaging/registration-token-not-registered" ||
                 resp.error?.code === "messaging/invalid-registration-token"
               ) {
-                invalidTokens.push(token);
+                invalidTokens.push(device.token);
               }
             }
           });
@@ -548,7 +560,7 @@ export const dutyServices = {
           if (invalidTokens.length > 0) {
             await User.updateOne(
               { _id: user._id },
-              { $pull: { fcmTokens: { $in: invalidTokens } } },
+              { $pull: { fcmTokens: { token: { $in: invalidTokens } } } },
             );
           }
         }

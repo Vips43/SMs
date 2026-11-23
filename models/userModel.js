@@ -49,6 +49,16 @@ const educationSchema = new mongoose.Schema({
   grade: { type: String },
 });
 
+const fcmTokenSchema = new mongoose.Schema(
+  {
+    deviceId: { type: String, required: true },
+    token: { type: String, required: true },
+    deviceName: { type: String, default: "Web Browser" },
+    lastActive: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
+
 const addressFields = {
   l1: { type: String, default: "", trim: true },
   l2: { type: String, default: "", trim: true },
@@ -169,7 +179,10 @@ const userSchema = new mongoose.Schema(
     },
 
     //for push notification
-    fcmTokens: { type: [String], default: [] },
+    fcmTokens: {
+      type: [fcmTokenSchema],
+      default: [],
+    },
     reminderSentOn: { type: Date, default: null },
     refreshTokens: { type: [String], select: false, default: [] },
   },
