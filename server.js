@@ -65,7 +65,7 @@ cloudinary.config({
 });
 
 const mongoUri =
-  process.env.NODE_ENV !== "production"
+  process.env.NODE_ENV === "production"
     ? process.env.MONGO_URI
     : process.env.MONGO_LOCAL;
 
