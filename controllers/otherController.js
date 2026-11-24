@@ -13,7 +13,7 @@ export const sendNotification = async (req, res, next) => {
 
 export const testNotification = async (req, res, next) => {
   try {
-    const { userId } = req.body;
+    const { userId } = req.query;
 
     const user = await User.findById(userId).select("firstname fcmTokens");
 

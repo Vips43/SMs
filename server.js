@@ -22,7 +22,7 @@ import otherRouter from "./routes/otherRoutes.js";
 import { autoCheckoutUser, cronService } from "./services/cron.service.js";
 import { saveFCMToken } from "./controllers/userController.js";
 import dns from "node:dns";
-
+import { testNotification } from "./controllers/otherController.js";
 
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 dotenv.config();
@@ -65,7 +65,7 @@ cloudinary.config({
 });
 
 const mongoUri =
-  process.env.NODE_ENV !== "production"
+  process.env.NODE_ENV === "production"
     ? process.env.MONGO_URI
     : process.env.MONGO_LOCAL;
 
@@ -86,9 +86,10 @@ app.use("/api/emp", authentication, empRouter);
 app.use("/api/site", authentication, siteRouter);
 app.use("/api/fcm", otherRouter);
 
-//save token 
+//save token
 app.post("/api/token/fcm-token", authentication, saveFCMToken);
 
+app.get("/api/testreminder", testNotification);
 app.get("/api/cron/send-reminders", cronService);
 app.get("/api/cron/auto-checkout", autoCheckoutUser);
 
