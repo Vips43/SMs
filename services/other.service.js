@@ -4,6 +4,8 @@ import { startEndDate } from "./emp.service.js";
 import Attendence from "../models/attendenceModel.js";
 
 const otherServices = {
+  
+
   reminderNotification: async () => {
     const { endOfDay, startOfDay } = startEndDate();
 
@@ -11,7 +13,7 @@ const otherServices = {
       "fcmTokens.0": { $exists: true },
       $or: [{ reminderSentOn: null }, { reminderSentOn: { $lt: startOfDay } }],
     })
-      .select("firstname fcmTokens attendenceRecords")
+      .select("firstname fcmTokens")
       .populate({
         path: "attendenceRecords",
         match: {
@@ -21,102 +23,30 @@ const otherServices = {
         },
       });
 
-    console.log(
-      "Day range:",
-      startOfDay,
-      endOfDay,
-      "| users with tokens:",
-      users?.length,
-    );
+    for (const user of users) {
+      if (!user.attendenceRecords?.length) continue;
 
-    const usersToRemind = users.filter(
-      (user) => user.attendenceRecords && user.attendenceRecords.length > 0,
-    );
-
-    if (usersToRemind.length === 0) {
-      return { message: "No users need a reminder today." };
-    }
-
-    let successCount = 0;
-    let failureCount = 0;
-    const notifiedUserIds = [];
-
-    for (const user of usersToRemind) {
-      const userName = user.firstname || "there";
-
-      // 1. Extract token strings from the subdocument array
       const tokens = user.fcmTokens.map((item) => item.token).filter(Boolean);
 
-      if (tokens.length === 0) continue;
+      if (!tokens.length) continue;
 
-      try {
-        const res = await getMessaging().sendEachForMulticast({
-          tokens,
-          notification: {
-            title: `Hello ${userName}, Time to Check Out!`,
-            body: "It looks like you haven't checked out for today yet. Please remember to clock out.",
-          },
-          data: {
-            type: "checkout_reminder",
-            userId: user._id.toString(),
-          },
-        });
+      await getMessaging().sendEachForMulticast({
+        tokens,
+        notification: {
+          title: `Hello ${user.firstname || "there"}, Time to Check Out!`,
+          body: "Please remember to clock out for today.",
+        },
+        data: {
+          type: "checkout_reminder",
+          userId: user._id.toString(),
+        },
+      });
 
-        successCount += res.successCount;
-        failureCount += res.failureCount;
-
-        // 2. Collect dead token strings using the mapped `tokens` array
-        const dead = [];
-        res.responses.forEach((r, i) => {
-          if (!r.success) {
-            console.error(
-              "FCM send failed:",
-              user._id,
-              r.error?.code,
-              r.error?.message,
-            );
-            const code = r.error?.code;
-            if (
-              code === "messaging/registration-token-not-registered" ||
-              code === "messaging/invalid-registration-token"
-            ) {
-              dead.push(tokens[i]);
-            }
-          }
-        });
-
-        // 3. Pull the subdocument matching the dead `token` field
-        if (dead.length) {
-          await User.updateOne(
-            { _id: user._id },
-            { $pull: { fcmTokens: { token: { $in: dead } } } },
-          );
-        }
-
-        // mark as reminded if at least one device received it
-        if (res.successCount > 0) notifiedUserIds.push(user._id);
-      } catch (error) {
-        failureCount++;
-        console.error(
-          "Reminder failed for user",
-          user._id,
-          error.code || error.message,
-        );
-      }
+      user.reminderSentOn = new Date();
+      await user.save();
     }
 
-    if (notifiedUserIds.length > 0) {
-      await User.updateMany(
-        { _id: { $in: notifiedUserIds } },
-        { $set: { reminderSentOn: new Date() } },
-      );
-    }
-
-    return {
-      successCount,
-      failureCount,
-      message: `Processed reminders: ${successCount} sent, ${failureCount} failed.`,
-    };
+    return { message: "Checkout reminders processed." };
   },
 
   autoCheckOut: async () => {
